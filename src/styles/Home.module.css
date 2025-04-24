@@ -1,194 +1,194 @@
 .canvasContainer {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    z-index: -1;
-  }
-  
-  .content {
-    position: relative;
-    z-index: 1;
-  }
-  
-  .hero {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 0 20px;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7));
-  }
-  
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: -1;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0 20px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7));
+}
+
+.hero h1 {
+  font-size: 3rem;
+  margin-bottom: 20px;
+  color: #4CAF50;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.hero p {
+  font-size: 1.2rem;
+  max-width: 800px;
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+.ctaButton {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 1rem;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.ctaButton:hover {
+  background-color: #3e8e41;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0,0,0,0.2);
+}
+
+.features {
+  padding: 80px 20px;
+  background-color: rgba(18, 18, 18, 0.9);
+}
+
+.features h2 {
+  text-align: center;
+  margin-bottom: 60px;
+  font-size: 2.5rem;
+  color: #4CAF50;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.featureCard {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 30px;
+  transition: transform 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.featureCard:hover {
+  transform: translateY(-10px);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.featureCard h3 {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  color: #4CAF50;
+}
+
+.featureCard p {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.floatingCoin {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background-color: #FFD700;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  color: #000;
+  animation: float 3s infinite ease-in-out;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+  bottom: 0;
+  z-index: 5;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0) translateX(20px); }
+}
+
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: rgba(0,0,0,0.8);
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #4CAF50;
+}
+
+.navLinks {
+  display: flex;
+  gap: 20px;
+}
+
+.navLinks a {
+  color: white;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.navLinks a:hover {
+  color: #4CAF50;
+}
+
+.footer {
+  background-color: rgba(0,0,0,0.9);
+  text-align: center;
+  padding: 30px 20px;
+  font-size: 0.9rem;
+}
+
+.controlsHint {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background-color: rgba(0,0,0,0.7);
+  padding: 10px 15px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  z-index: 10;
+}
+
+@media (max-width: 768px) {
   .hero h1 {
-    font-size: 3rem;
-    margin-bottom: 20px;
-    color: #4CAF50;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    font-size: 2.2rem;
   }
   
   .hero p {
-    font-size: 1.2rem;
-    max-width: 800px;
-    margin-bottom: 30px;
-    line-height: 1.6;
-  }
-  
-  .ctaButton {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 12px 24px;
     font-size: 1rem;
-    border-radius: 30px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: bold;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  }
-  
-  .ctaButton:hover {
-    background-color: #3e8e41;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 8px rgba(0,0,0,0.2);
-  }
-  
-  .features {
-    padding: 80px 20px;
-    background-color: rgba(18, 18, 18, 0.9);
   }
   
   .features h2 {
-    text-align: center;
-    margin-bottom: 60px;
-    font-size: 2.5rem;
-    color: #4CAF50;
-  }
-  
-  .featureGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 40px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  
-  .featureCard {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    padding: 30px;
-    transition: transform 0.3s ease;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  }
-  
-  .featureCard:hover {
-    transform: translateY(-10px);
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  .featureCard h3 {
-    font-size: 1.5rem;
-    margin-bottom: 15px;
-    color: #4CAF50;
-  }
-  
-  .featureCard p {
-    font-size: 1rem;
-    line-height: 1.6;
-  }
-  
-  .floatingCoin {
-    position: absolute;
-    width: 50px;
-    height: 50px;
-    background-color: #FFD700;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    color: #000;
-    animation: float 3s infinite ease-in-out;
-    box-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
-    bottom: 0;
-    z-index: 5;
-  }
-  
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
-    100% { transform: translateY(0) translateX(20px); }
-  }
-  
-  .navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background-color: rgba(0,0,0,0.8);
-    padding: 15px 30px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    z-index: 100;
-  }
-  
-  .logo {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #4CAF50;
+    font-size: 2rem;
   }
   
   .navLinks {
-    display: flex;
-    gap: 20px;
+    display: none;
   }
-  
-  .navLinks a {
-    color: white;
-    text-decoration: none;
-    transition: color 0.3s;
-  }
-  
-  .navLinks a:hover {
-    color: #4CAF50;
-  }
-  
-  .footer {
-    background-color: rgba(0,0,0,0.9);
-    text-align: center;
-    padding: 30px 20px;
-    font-size: 0.9rem;
-  }
-  
-  .controlsHint {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    background-color: rgba(0,0,0,0.7);
-    padding: 10px 15px;
-    border-radius: 5px;
-    font-size: 0.9rem;
-    z-index: 10;
-  }
-  
-  @media (max-width: 768px) {
-    .hero h1 {
-      font-size: 2.2rem;
-    }
-    
-    .hero p {
-      font-size: 1rem;
-    }
-    
-    .features h2 {
-      font-size: 2rem;
-    }
-    
-    .navLinks {
-      display: none;
-    }
-  }
+}
