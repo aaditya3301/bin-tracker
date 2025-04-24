@@ -1,8 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  images: {
-    domains: ['your-domain-here.com'], // Add your image domains if needed
+  swcMinify: true,
+  // The appDir is now default in Next.js 13+
+  experimental: {
+    serverComponentsExternalPackages: [],
   },
 }
 

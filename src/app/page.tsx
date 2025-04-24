@@ -39,7 +39,7 @@ const features = [
 export default function Home() {
   const [coins, setCoins] = useState([]);
   const handleGetStarted = () => {
-    signIn('google');
+    signIn('google', { callbackUrl: '/home' });
   };
 
   // Create floating coins
