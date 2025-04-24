@@ -170,6 +170,7 @@ export default function EcoRouteModal({ isOpen, onClose, onRouteSelect, nearbyBi
         {
           id: 'eco-optimal',
           name: 'Eco-Optimal Route',
+          
           duration: Math.round(distance * 3), // ~20km/h walking/cycling
           distance: Math.round(distance * 10) / 10,
           binCount: binsAlongRoute.length,
@@ -295,17 +296,19 @@ export default function EcoRouteModal({ isOpen, onClose, onRouteSelect, nearbyBi
           {step === 'locations' && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="start">Starting Point</Label>
+                <Label htmlFor="start" className='text-black'>Starting Point</Label>
                 <div className="relative">
                   <Input
                     id="start"
                     placeholder="Enter starting location"
+                    className='text-black'
                     value={startQuery}
+                    
                     onChange={(e) => {
                       setStartQuery(e.target.value)
                       searchLocations(e.target.value, true)
                     }}
-                    className="pr-8"
+                    
                   />
                   {startSearching ? (
                     <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-gray-400" />
@@ -319,7 +322,7 @@ export default function EcoRouteModal({ isOpen, onClose, onRouteSelect, nearbyBi
                         {startResults.map((location, i) => (
                           <li 
                             key={i} 
-                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm text-black"
                             onClick={() => selectLocation(location, true)}
                           >
                             {location.name}
@@ -332,22 +335,23 @@ export default function EcoRouteModal({ isOpen, onClose, onRouteSelect, nearbyBi
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="end">Destination</Label>
+                <Label htmlFor="end" className='text-black'>Destination</Label>
                 <div className="relative">
                   <Input
                     id="end"
                     placeholder="Enter destination"
                     value={endQuery}
+                    className='text-black'
                     onChange={(e) => {
                       setEndQuery(e.target.value)
                       searchLocations(e.target.value, false)
                     }}
-                    className="pr-8"
+                   
                   />
                   {endSearching ? (
-                    <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-gray-400" />
+                    <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-black" />
                   ) : (
-                    <Search className="absolute right-2 top-2.5 h-4 w-4 text-gray-400" />
+                    <Search className="absolute right-2 top-2.5 h-4 w-4 text-black" />
                   )}
                   
                   {endResults.length > 0 && (
@@ -356,7 +360,7 @@ export default function EcoRouteModal({ isOpen, onClose, onRouteSelect, nearbyBi
                         {endResults.map((location, i) => (
                           <li 
                             key={i} 
-                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm text-black"
                             onClick={() => selectLocation(location, false)}
                           >
                             {location.name}
@@ -440,15 +444,15 @@ export default function EcoRouteModal({ isOpen, onClose, onRouteSelect, nearbyBi
                     <div className="mt-2 grid grid-cols-3 gap-2 text-center">
                       <div className="bg-gray-50 rounded p-2">
                         <div className="text-xs text-gray-500">Duration</div>
-                        <div className="font-medium">{route.duration} min</div>
+                        <div className="font-medium text-gray-600">{route.duration} min</div>
                       </div>
                       <div className="bg-gray-50 rounded p-2">
                         <div className="text-xs text-gray-500">Distance</div>
-                        <div className="font-medium">{route.distance} km</div>
+                        <div className="font-medium text-black">{route.distance} km</div>
                       </div>
                       <div className="bg-gray-50 rounded p-2">
                         <div className="text-xs text-gray-500">Bins</div>
-                        <div className="font-medium">{route.binCount}</div>
+                        <div className="font-medium text-gray-600">{route.binCount}</div>
                       </div>
                     </div>
                   </div>
@@ -466,7 +470,7 @@ export default function EcoRouteModal({ isOpen, onClose, onRouteSelect, nearbyBi
                 type="button" 
                 onClick={onClose} 
                 variant="outline" 
-                className="mr-2"
+                className="mr-2 text-black"
               >
                 Cancel
               </Button>

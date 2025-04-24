@@ -648,21 +648,21 @@ export default function FullScreenMap({ searchLocation }: FullScreenMapProps) {
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="bg-gray-50 rounded p-2 text-center">
               <div className="text-xs text-gray-500">Duration</div>
-              <div className="font-medium">
+              <div className="font-medium text-black">
                 {selectedRoute.routeId === 'eco-optimal' ? '18 min' : 
                  selectedRoute.routeId === 'bin-maximizer' ? '21 min' : '15 min'}
               </div>
             </div>
             <div className="bg-gray-50 rounded p-2 text-center">
               <div className="text-xs text-gray-500">Distance</div>
-              <div className="font-medium">
+              <div className="font-medium text-black">
                 {selectedRoute.routeId === 'eco-optimal' ? '1.2 km' : 
                  selectedRoute.routeId === 'bin-maximizer' ? '1.4 km' : '1.1 km'}
               </div>
             </div>
             <div className="bg-gray-50 rounded p-2 text-center">
               <div className="text-xs text-gray-500">Bins</div>
-              <div className="font-medium">
+              <div className="font-medium text-black">
                 {selectedRoute.routeId === 'eco-optimal' ? '5' : 
                  selectedRoute.routeId === 'bin-maximizer' ? '8' : '3'}
               </div>
