@@ -6,6 +6,11 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: [],
   },
-}
+  images: {
+    domains: [
+      'lh3.googleusercontent.com', // For Google OAuth profile images
+    ],
+  },
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
