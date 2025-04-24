@@ -2,7 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  // The appDir is now default in Next.js 13+
+  images: {
+    domains: [],
+    remotePatterns: [],
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+  },
   experimental: {
     serverComponentsExternalPackages: [],
   },
