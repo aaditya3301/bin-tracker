@@ -389,11 +389,11 @@ export default function BinReportPage() {
             {/* Step 2: Bin Details */}
             {formStep === 2 && (
               <div>
-                <h2 className="text-lg font-semibold text-gray-700 mb-3">Bin Details</h2>
+                <h2 className="text-lg font-semibold text-gray-700 mb-8">Bin Details</h2>
                 
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="binName" className="flex items-center text-black">
+                    <Label htmlFor="binName" className="flex items-center text-black mb-2">
                       Bin Name/ID <span className="text-red-500 ml-1">*</span>
                       </Label>
                       <Input
@@ -413,7 +413,7 @@ export default function BinReportPage() {
                   </div>
                  
                   <div>
-                    <Label htmlFor="binAddress" className="flex items-center text-black">
+                    <Label htmlFor="binAddress" className="flex items-center text-black mb-2">
                       Full Address <span className="text-red-500 ml-1">*</span>
                     </Label>
                     <Textarea
@@ -433,7 +433,7 @@ export default function BinReportPage() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="binDescription" className="flex items-center text-black">
+                    <Label htmlFor="binDescription" className="flex items-center text-black mb-2">
                       Description (Optional)
                     </Label>
                     <Textarea
