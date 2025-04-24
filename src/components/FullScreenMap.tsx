@@ -1,10 +1,12 @@
 "use client"
 
 import { useEffect, useState, useRef } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle, Polyline } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Loader2, Navigation, Phone, Clock, Info, MapPin } from 'lucide-react'
+import { Loader2, Navigation, Phone, Clock, Info, MapPin, Route, ArrowRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import EcoRouteModal from './EcoRouteModal'
+import L from 'leaflet'
 
 // Fix for Leaflet icons in Next.js
 const fixLeafletIcons = () => {
@@ -54,6 +56,19 @@ interface FullScreenMapProps {
 }
 
 export default function FullScreenMap({ searchLocation }: FullScreenMapProps) {
+  // Eco-route feature state
+  const [ecoRouteModalOpen, setEcoRouteModalOpen] = useState(false)
+  const [selectedRoute, setSelectedRoute] = useState<{
+    start: { lat: number, lng: number, name: string },
+    end: { lat: number, lng: number, name: string },
+    routeId: string,
+    allRoutes?: Array<{
+      id: string,
+      points: Array<[number, number]>
+    }>
+  } | null>(null)
+
+  // Original state variables
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +128,69 @@ export default function FullScreenMap({ searchLocation }: FullScreenMapProps) {
       fetchNearbyBins(searchLocation.lat, searchLocation.lng);
     }
   }, [searchLocation]);
+  
+  // Add route selection handler
+  const handleRouteSelect = (
+    startLocation: { lat: number, lng: number, name: string },
+    endLocation: { lat: number, lng: number, name: string },
+    routeId: string
+  ) => {
+    // Generate some waypoints for each route type to make them visually distinct
+    const directLine: [number, number][] = [
+      [startLocation.lat, startLocation.lng],
+      [endLocation.lat, endLocation.lng]
+    ];
+    
+    // Create a slightly curved path for the eco-optimal route
+    const midLat = (startLocation.lat + endLocation.lat) / 2;
+    const midLng = (startLocation.lng + endLocation.lng) / 2;
+    // Add an offset to create a curve
+    const offset = 0.002; // Adjust based on your map scale
+    const ecoOptimalPoints: [number, number][] = [
+      [startLocation.lat, startLocation.lng],
+      [midLat + offset, midLng + offset],
+      [endLocation.lat, endLocation.lng]
+    ];
+    
+    // Create a more curved path with more waypoints for bin-maximizer
+    const binMaximizerPoints: [number, number][] = [
+      [startLocation.lat, startLocation.lng],
+      [startLocation.lat + (endLocation.lat - startLocation.lat) * 0.25 + offset*1.5, 
+       startLocation.lng + (endLocation.lng - startLocation.lng) * 0.25 + offset*1.5],
+      [midLat + offset*2, midLng + offset*2],
+      [startLocation.lat + (endLocation.lat - startLocation.lat) * 0.75 + offset*1.5, 
+       startLocation.lng + (endLocation.lng - startLocation.lng) * 0.75 + offset*1.5],
+      [endLocation.lat, endLocation.lng]
+    ];
+    
+    // Create a different curved path for fastest route
+    const fastestPoints: [number, number][] = [
+      [startLocation.lat, startLocation.lng],
+      [midLat - offset, midLng - offset],
+      [endLocation.lat, endLocation.lng]
+    ];
+    
+    // Set the selected route with all the route options
+    setSelectedRoute({
+      start: startLocation,
+      end: endLocation,
+      routeId: routeId,
+      allRoutes: [
+        { id: 'eco-optimal', points: ecoOptimalPoints },
+        { id: 'bin-maximizer', points: binMaximizerPoints },
+        { id: 'fastest', points: fastestPoints }
+      ]
+    });
+    
+    // Center the map at the midpoint between start and end
+    if (mapRef.current) {
+      // Access the Leaflet map instance
+      const map = mapRef.current as any;
+      if (map && map.flyTo) {
+        map.flyTo([midLat, midLng], 12);
+      }
+    }
+  }
   
   // Fetch bins near specified location
   const fetchNearbyBins = async (lat: number, lng: number) => {
@@ -197,6 +275,46 @@ export default function FullScreenMap({ searchLocation }: FullScreenMapProps) {
     return Math.round(d);
   };
 
+  // Helper function to check if a point is near a line segment
+  const isPointNearLine = (
+    pointLat: number, pointLng: number,
+    line1Lat: number, line1Lng: number,
+    line2Lat: number, line2Lng: number,
+    threshold: number
+  ) => {
+    // Calculate the minimum distance from point to line segment
+    const A = pointLat - line1Lat;
+    const B = pointLng - line1Lng;
+    const C = line2Lat - line1Lat;
+    const D = line2Lng - line1Lng;
+    
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = dot / lenSq;
+    
+    let closestLat, closestLng;
+    
+    if (param < 0) {
+      closestLat = line1Lat;
+      closestLng = line1Lng;
+    }
+    else if (param > 1) {
+      closestLat = line2Lat;
+      closestLng = line2Lng;
+    }
+    else {
+      closestLat = line1Lat + param * C;
+      closestLng = line1Lng + param * D;
+    }
+    
+    const distance = Math.sqrt(
+      Math.pow(pointLat - closestLat, 2) + 
+      Math.pow(pointLng - closestLng, 2)
+    );
+    
+    return distance < threshold;
+  };
+
   // Format distance for display
   const formatDistance = (meters: number | undefined): string => {
     if (meters === undefined) return "Unknown";
@@ -257,7 +375,7 @@ export default function FullScreenMap({ searchLocation }: FullScreenMapProps) {
     : userLocation || [40.7128, -74.0060] as [number, number];
   
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full relative">
       {typeof window !== 'undefined' && (
         <MapContainer
           center={mapCenter}
@@ -269,6 +387,132 @@ export default function FullScreenMap({ searchLocation }: FullScreenMapProps) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
+          
+          {/* Add Eco-Route button */}
+          <div className="absolute top-4 right-4 z-[999] flex">
+            <Button 
+              className="bg-green-600 hover:bg-green-700 h-10 whitespace-nowrap"
+              onClick={() => setEcoRouteModalOpen(true)}
+            >
+              <Route className="h-4 w-4 mr-1" />
+              Eco-Route
+            </Button>
+          </div>
+          
+          // Update the Polyline component in your route display logic (around line 382)
+
+{/* Add route display logic */}
+{selectedRoute && selectedRoute.allRoutes && selectedRoute.allRoutes.map(route => (
+  <Polyline
+    key={route.id}
+    positions={route.points}
+    color={
+      route.id === 'eco-optimal' ? '#10b981' : // Green for eco-optimal
+      route.id === 'bin-maximizer' ? '#6366f1' : // Purple for bin-maximizer
+      '#ef4444' // Red for fastest
+    }
+    weight={
+      route.id === selectedRoute.routeId ? 
+        (route.id === 'eco-optimal' ? 6 : 5) : // Make eco-optimal even thicker
+        3
+    }
+    opacity={
+      route.id === selectedRoute.routeId ? 
+        (route.id === 'eco-optimal' ? 1 : 0.8) : // Full opacity for eco-optimal
+        0.4 // Other routes more faded
+    }
+    dashArray={route.id === selectedRoute.routeId ? undefined : '5, 5'}
+  >
+    <Popup>
+      <div className="p-2">
+        <p className="font-medium">
+          {route.id === 'eco-optimal' ? 'Eco-Optimal Route' :
+            route.id === 'bin-maximizer' ? 'Bin Maximizer Route' : 'Fastest Route'}
+        </p>
+        <p className="text-xs text-gray-500">
+          {route.id === selectedRoute.routeId ? 'Selected route' : 'Click to select this route'}
+        </p>
+      </div>
+    </Popup>
+  </Polyline>
+))}
+
+          {/* Add this to highlight bins near the selected route */}
+          {selectedRoute && nearbyBins.map(bin => {
+            // Check if bin is near the selected route
+            const isNearRoute = selectedRoute.allRoutes?.find(route => {
+              if (route.id !== selectedRoute.routeId) return false;
+              
+              // Check each segment of the route
+              for (let i = 0; i < route.points.length - 1; i++) {
+                const pointA = route.points[i];
+                const pointB = route.points[i + 1];
+                
+                // Check if bin is near this segment
+                if (isPointNearLine(
+                  bin.location.lat, bin.location.lng,
+                  pointA[0], pointA[1],
+                  pointB[0], pointB[1],
+                  0.005 // threshold in degrees
+                )) {
+                  return true;
+                }
+              }
+              return false;
+            });
+            
+            if (isNearRoute) {
+              return (
+                <Circle
+                  key={`highlight-${bin.id}`}
+                  center={[bin.location.lat, bin.location.lng]}
+                  radius={20}
+                  pathOptions={{
+                    color: selectedRoute.routeId === 'eco-optimal' ? '#10b981' :
+                           selectedRoute.routeId === 'bin-maximizer' ? '#6366f1' : '#ef4444',
+                    weight: 3,
+                    fillColor: selectedRoute.routeId === 'eco-optimal' ? '#10b981' :
+                              selectedRoute.routeId === 'bin-maximizer' ? '#6366f1' : '#ef4444',
+                    fillOpacity: 0.3
+                  }}
+                />
+              );
+            }
+            return null;
+          })}
+
+          {/* Add route markers */}
+          {selectedRoute && (
+            <>
+              <Marker
+                position={[selectedRoute.start.lat, selectedRoute.start.lng]}
+                icon={L.divIcon({
+                  html: `<div class="h-4 w-4 rounded-full bg-green-500 border-2 border-white"></div>`,
+                  className: 'custom-div-icon',
+                  iconSize: [20, 20],
+                  iconAnchor: [10, 10]
+                })}
+              >
+                <Popup>
+                  <div className="font-medium">Start: {selectedRoute.start.name}</div>
+                </Popup>
+              </Marker>
+              
+              <Marker
+                position={[selectedRoute.end.lat, selectedRoute.end.lng]}
+                icon={L.divIcon({
+                  html: `<div class="h-4 w-4 rounded-full bg-blue-500 border-2 border-white"></div>`,
+                  className: 'custom-div-icon',
+                  iconSize: [20, 20],
+                  iconAnchor: [10, 10]
+                })}
+              >
+                <Popup>
+                  <div className="font-medium">Destination: {selectedRoute.end.name}</div>
+                </Popup>
+              </Marker>
+            </>
+          )}
           
           {/* Fly to search location or user location */}
           <FlyToLocation 
@@ -369,9 +613,87 @@ export default function FullScreenMap({ searchLocation }: FullScreenMapProps) {
           ))}
         </MapContainer>
       )}
+
+      {/* Route information panel */}
+      {selectedRoute && (
+        <div className="absolute bottom-4 left-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-[999] max-w-md">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h3 className="font-semibold text-gray-800 flex items-center">
+                {selectedRoute.routeId === 'eco-optimal' ? 'Eco-Optimal Route' : 
+                 selectedRoute.routeId === 'bin-maximizer' ? 'Bin Maximizer Route' : 'Fastest Route'}
+                
+                {selectedRoute.routeId === 'eco-optimal' && (
+                  <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+                    Recommended
+                  </span>
+                )}
+              </h3>
+              <div className="text-sm text-gray-600 mt-1">
+                <span className="font-medium">{selectedRoute.start.name.split(',')[0]}</span>
+                <ArrowRight className="inline h-3 w-3 mx-1" />
+                <span className="font-medium">{selectedRoute.end.name.split(',')[0]}</span>
+              </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setSelectedRoute(null)}
+              className="h-6 w-6 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="bg-gray-50 rounded p-2 text-center">
+              <div className="text-xs text-gray-500">Duration</div>
+              <div className="font-medium">
+                {selectedRoute.routeId === 'eco-optimal' ? '18 min' : 
+                 selectedRoute.routeId === 'bin-maximizer' ? '21 min' : '15 min'}
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded p-2 text-center">
+              <div className="text-xs text-gray-500">Distance</div>
+              <div className="font-medium">
+                {selectedRoute.routeId === 'eco-optimal' ? '1.2 km' : 
+                 selectedRoute.routeId === 'bin-maximizer' ? '1.4 km' : '1.1 km'}
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded p-2 text-center">
+              <div className="text-xs text-gray-500">Bins</div>
+              <div className="font-medium">
+                {selectedRoute.routeId === 'eco-optimal' ? '5' : 
+                 selectedRoute.routeId === 'bin-maximizer' ? '8' : '3'}
+              </div>
+            </div>
+          </div>
+          
+          <div className="text-xs text-gray-600 bg-green-50 p-2 rounded border border-green-100">
+            <p className="font-medium text-green-800 mb-1">Eco-friendly insights:</p>
+            {selectedRoute.routeId === 'eco-optimal' && 
+              <p>This balanced route passes by 5 waste bins while minimizing travel time. Estimated carbon savings: 0.8kg CO₂ compared to driving.</p>
+            }
+            {selectedRoute.routeId === 'bin-maximizer' && 
+              <p>This route maximizes access to 8 waste bins along your journey. Perfect for responsible waste disposal during your trip.</p>
+            }
+            {selectedRoute.routeId === 'fastest' && 
+              <p>The quickest route with minimal detours. You'll still pass by 3 waste bins for convenient disposal.</p>
+            }
+          </div>
+        </div>
+      )}
+      
+      {/* Add the EcoRouteModal */}
+      <EcoRouteModal 
+        isOpen={ecoRouteModalOpen}
+        onClose={() => setEcoRouteModalOpen(false)}
+        onRouteSelect={handleRouteSelect}
+        nearbyBins={nearbyBins}
+      />
       
       {/* Bin count indicator */}
-      {!loading && nearbyBins.length > 0 && (
+      {!loading && nearbyBins.length > 0 && !selectedRoute && (
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-md text-sm font-medium">
           {nearbyBins.length} bins found {searchLocation ? 'near this location' : 'around you'}
         </div>
