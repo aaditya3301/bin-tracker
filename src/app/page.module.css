@@ -1,0 +1,76 @@
+.main {
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1rem, 5vw, 3rem);
+  background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7));
+}
+
+.heroContent {
+  text-align: center;
+  max-width: min(800px, 90%);
+}
+
+.heroContent h1 {
+  font-size: clamp(2rem, 5vw, 4rem);
+  margin-bottom: clamp(1rem, 3vw, 2rem);
+  color: #4CAF50;
+}
+
+.heroContent p {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  margin-bottom: clamp(1.5rem, 4vw, 3rem);
+  line-height: 1.6;
+}
+
+.ctaButton {
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  padding: clamp(0.8rem, 2vw, 1.2rem) clamp(1.5rem, 4vw, 2.5rem);
+  border-radius: 30px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.features {
+  padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 5vw, 3rem);
+  background: rgba(0,0,0,0.9);
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .heroContent {
+    padding: 1rem;
+  }
+  
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .featureGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
