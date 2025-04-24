@@ -50,7 +50,7 @@ export default function HomePage() {
                 <Leaf className="h-7 w-7 text-[#4CAF50] mr-2" />
                 <h1 className="text-2xl font-bold">
                   <span className="text-[#4CAF50]">BIN</span>
-                  <span className="text-gray-800">Track</span>
+                  <span className="text-gray-800">track</span>
                 </h1>
               </motion.div>
             </Link>
@@ -74,7 +74,7 @@ export default function HomePage() {
                 Community
               </Link>
             </motion.nav>
-
+          
             <motion.div
               className="flex items-center space-x-4"
               initial={{ opacity: 0, y: -10 }}
@@ -106,128 +106,126 @@ export default function HomePage() {
         </div>
       </header>
 
-      <div className="container mx-auto py-8 px-4 md:px-6">
+      <div className="container mx-auto">
         <motion.div
-          className="mb-8"
+          className="mb-8 relative"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-2xl font-bold text-gray-800">Welcome back, {session?.user?.name?.split(' ')[0] || "User"}!</h2>
-          <p className="text-gray-600 mt-1">Here's your waste management dashboard</p>
-        </motion.div>
+          {/* Hero section with background image */}
+          <div className="relative h-[500px] w-full p-5 overflow-hidden">
+            <div className="absolute inset-0">
+              <img
+                src="/Landing 1.png" // Replace with your actual image path
+                alt="Cleaning Pattern Background"
+                className="w-full h-full object-cover"
+              />
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-green-00 bg-opacity-50 ">
+                </div>
+            </div>
 
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        >
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-600">Bins Reported</h3>
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-green-600" />
+            {/* Content overlay */}
+            <div className="relative z-10 h-full flex items-center">
+              <div className="container mx-auto px-4 md:px-6">
+                <div className="text-center max-w-3xl mx-auto">
+                  <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">
+                    <span className="text-green-700">Eco-Tasks for Everyday </span>
+                    <span className="text-yellow-400">Heroes</span>
+                  </h2>
+                  <p className="text-xl text-black mb-8">
+                    Track bins. Earn rewards. Make a difference.
+                  </p>
+                  
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.15 }}
+                    className="space-x-4 flex items-center justify-center"
+                  >
+                    <motion.a
+                      href="/map"
+                      className="px-6 py-3 border-2 border-green-600 text-green-600 rounded-md hover:bg-green-600 hover:text-white transition-all duration-300 transform hover:scale-105"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Locate Dustbin
+                    </motion.a>
+                    <motion.a
+                      href="/report"
+                       className="px-6 py-3 border-2 border-green-600 text-green-600 rounded-md hover:bg-green-600 hover:text-white transition-all duration-300 transform hover:scale-105"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Report New Bin
+                    </motion.a>
+                  </motion.div>
+                </div>
               </div>
-            </div>
-            <p className="text-3xl font-bold">{stats.binsReported}</p>
-            <div className="mt-2 text-sm text-green-600 flex items-center">
-              <ArrowRight className="h-3 w-3 mr-1" />
-              <span>Report a bin</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-600">Rewards Earned</h3>
-              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
-                <svg className="h-5 w-5 text-amber-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="8" />
-                  <path d="M12 6v12M8 12h8" />
-                </svg>
-              </div>
-            </div>
-            <p className="text-3xl font-bold">{stats.rewardsEarned}</p>
-            <div className="mt-2 text-sm text-amber-600 flex items-center">
-              <ArrowRight className="h-3 w-3 mr-1" />
-              <span>View rewards</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-gray-600">Tasks Completed</h3>
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <svg className="h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <path d="M22 4 12 14.01l-3-3" />
-                </svg>
-              </div>
-            </div>
-            <p className="text-3xl font-bold">{stats.tasksCompleted}</p>
-            <div className="mt-2 text-sm text-blue-600 flex items-center">
-              <ArrowRight className="h-3 w-3 mr-1" />
-              <span>View completed tasks</span>
             </div>
           </div>
         </motion.div>
 
         <motion.div
-          className="mb-10"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link href="/map">
-              <motion.div 
-                className="bg-[#4CAF50] rounded-xl shadow-lg p-6 text-white cursor-pointer hover:shadow-xl transition-all"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="rounded-full bg-white/20 p-3">
-                    <MapPin className="h-8 w-8" />
-                  </div> 
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold mb-2">Bin Locator</h3>
-                    <p className="opacity-90">Find the nearest waste bins around you</p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-white/80">
-                  <span className="text-sm">Open interactive map</span>
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </div>
-              </motion.div>
-            </Link>
+        className="mb-10"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.25 }}>
+            <div className="relative h-[500px] w-full p-0 overflow-hidden">
+            <div className="absolute inset-0">
+              <img
+              src="/green thing w man.png"
+              alt="Cleaning Pattern Background"
+              className="w-full h-full object-cover"
+              />
+              {/* Dark overlay for better text visibility */}
+              <div className="absolute inset-0 bg-green-00 bg-opacity-50"></div>
+            </div>
             
-            <Link href="/report">
-              <motion.div 
-                className="bg-gradient-to-r from-[#3b8cbd] to-[#1d6fa5] rounded-xl shadow-lg p-6 text-white cursor-pointer hover:shadow-xl transition-all"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="rounded-full bg-white/20 p-3">
-                    <Plus className="h-8 w-8" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold mb-2">Bin Reporter</h3>
-                    <p className="opacity-90">Add new bin locations to the community</p>
-                  </div>
+            {/* Content overlaid on the image */}
+            <div className="relative z-10 h-full">
+              <div className="container mx-auto px-30 md:px-40 py-20 md:py-20">
+              <div className="mb-12">
+                <p className="uppercase tracking-wider mb-2 text-white">
+                HOW WE <span className="text-yellow-400">Work</span>
+                </p>
+                <h2 className="text-3xl md:text-4xl font-bold text-white">
+                Your Journey to a Cleaner City<br />
+                Starts Here
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="bg-white bg-opacity-90 rounded-lg p-6 text-gray-800 shadow-lg backdrop-blur-sm">
+                <h3 className="text-xl font-semibold text-green-600 mb-3">Spot the Problem</h3>
+                <p className="text-gray-600">
+                  See an overflowing bin? Littered area? Broken disposal unit?
+                </p>
                 </div>
-                <div className="mt-4 flex items-center text-white/80">
-                  <span className="text-sm">Report a new bin</span>
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                
+                <div className="bg-white bg-opacity-90 rounded-lg p-6 text-gray-800 shadow-lg backdrop-blur-sm">
+                <h3 className="text-xl font-semibold text-green-600 mb-3">Report with Evidence</h3>
+                <p className="text-gray-600">
+                  Open the website, fill out a quick form, and upload the photo.
+                </p>
                 </div>
-              </motion.div>
-            </Link>
-          </div>
-        </motion.div>
+                
+                <div className="bg-white bg-opacity-90 rounded-lg p-6 text-gray-800 shadow-lg backdrop-blur-sm">
+                <h3 className="text-xl font-semibold text-green-600 mb-3">Earn Eco-Coins</h3>
+                <p className="text-gray-600">
+                  Get rewarded for every valid report you make.
+                </p>
+                </div>
+              </div>
+              </div>
+            </div>
+            </div>
+          </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <motion.div 
-            className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+            className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-100 md:px-40 ml-40"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -253,12 +251,12 @@ export default function HomePage() {
           </motion.div>
 
           <motion.div 
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mr-40"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 ">
               <h3 className="text-lg font-semibold text-gray-800">Recent Activity</h3>
               <button className="text-sm text-[#4CAF50] hover:underline">
                 View all
@@ -310,8 +308,9 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <div>
-                <Link href="/" className="flex items-center">
-                  <span className="text-2xl font-bold text-green-700">BIN<span className="font-normal italic text-green-600">track</span></span>
+                <Link href="/" className="flex items-center mt-9">
+                <Leaf className="h-7 w-7 text-[#4CAF50] mr-2" />
+                  <span className="text-2xl font-bold text-green-700">BIN<span className="font-bold italic text-black ">track</span></span>
                 </Link>
                 <div className="flex space-x-4 mt-4">
                   <a href="#" className="bg-green-600 text-white p-2 rounded-full">
