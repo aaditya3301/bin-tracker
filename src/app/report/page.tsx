@@ -1,707 +1,513 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { motion } from "framer-motion"
-
-import { 
-  Leaf, 
-  ArrowLeft, 
-  Upload, 
-  MapPin, 
-  Info,
-  Check,
-  Loader2,
-  Navigation,
-  AlertTriangle
-} from "lucide-react"
-import { useSession } from "next-auth/react"
-import Image from "next/image"
-import EXIF from 'exif-js';
+import { useState, useRef, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import BinDetector from '@/components/BinDetector'
+import { Loader2, MapPin, Camera, Check, AlertTriangle, ArrowLeft } from 'lucide-react'
+
+// Import your UI components
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 
 const MapWithNoSSR = dynamic(
-    () => import('../../components/LocationMap'),
-    { ssr: false }
-  );
-
-// Import this if you decide to use a map visualization
-// import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+  () => import('../../components/LocationMap'),
+  { ssr: false }
+);
 
 export default function BinReportPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formStep, setFormStep] = useState(1)
   const [success, setSuccess] = useState(false)
   const [locationError, setLocationError] = useState("")
-  const [locationStatus, setLocationStatus] = useState("idle") // idle, loading, success, error
+  const [locationStatus, setLocationStatus] = useState("idle")
+  const [confidence, setConfidence] = useState(0)
   
-  const [formData, setFormData] = useState({
-    binName: "",
-    binType: "general",
-    location: "",
-    address: "",
-    details: "",
-    imageFile: null,
-    imagePreview: "",
-    // Geolocation data
-    latitude: null,
-    longitude: null,
-    accuracy: null,
-    timestamp: null,
-    // For extracted EXIF data from image
-    imageLatitude: null,
-    imageLongitude: null,
-    imageTimestamp: null
+  // Form fields
+  const [imageUrl, setImageUrl] = useState("")
+  const [binName, setBinName] = useState("")
+  const [binAddress, setBinAddress] = useState("")
+  const [binDescription, setBinDescription] = useState("")
+  const [location, setLocation] = useState({ lat: 0, lng: 0 })
+  
+  // Validation states
+  const [binDetected, setBinDetected] = useState(false)
+  const [formErrors, setFormErrors] = useState({
+    binName: false,
+    binAddress: false,
+    location: false
   })
+  
+  // File input ref
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Get user's current location when they reach step 2
-  useEffect(() => {
-    if (formStep === 2) {
-      getCurrentLocation()
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const url = URL.createObjectURL(file)
+      setImageUrl(url)
+      setBinDetected(false) // Reset detection status when image changes
     }
-  }, [formStep])
-
-  // Function to get current location
+  }
+  
+  // Request new image upload
+  const handleRequestNewImage = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }
+  
+  // Get current location
   const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
+    setLocationStatus("loading")
+    setLocationError("")
+    
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords
+          setLocation({ lat: latitude, lng: longitude })
+          setLocationStatus("success")
+          setFormErrors({...formErrors, location: false})
+        },
+        (error) => {
+          setLocationError(`Error getting location: ${error.message}`)
+          setLocationStatus("error")
+        }
+      )
+    } else {
       setLocationError("Geolocation is not supported by your browser")
       setLocationStatus("error")
+    }
+  }
+  
+  // Handle detection completion
+  const handleDetectionComplete = (isBin: boolean, confidence: number) => {
+    console.log(`Detection complete: isBin=${isBin}, confidence=${confidence}`)
+    setBinDetected(isBin)
+    
+    // Store confidence as percentage
+    const confidencePercent = confidence * 100
+    setConfidence(confidencePercent)
+  }
+  
+  // Move to next step
+  const goToNextStep = () => {
+    if (formStep === 1) {
+      if (!binDetected) {
+        alert("Please upload a clear image of a waste bin first")
+        return
+      }
+      setFormStep(2)
+    } else if (formStep === 2) {
+      // Check required fields before moving to location step
+      const errors = {
+        binName: !binName.trim(),
+        binAddress: !binAddress.trim(),
+        location: false
+      }
+      
+      setFormErrors(errors)
+      
+      if (errors.binName || errors.binAddress) {
+        return
+      }
+      
+      setFormStep(3)
+    }
+  }
+  
+  // Go to previous step
+  const goToPreviousStep = () => {
+    if (formStep > 1) {
+      setFormStep(formStep - 1)
+    }
+  }
+  
+  // Validate form
+  const validateForm = () => {
+    const errors = {
+      binName: !binName.trim(),
+      binAddress: !binAddress.trim(),
+      location: location.lat === 0 && location.lng === 0
+    }
+    
+    setFormErrors(errors)
+    return !Object.values(errors).includes(true)
+  }
+  
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    
+    if (!validateForm()) {
       return
     }
     
-    setLocationStatus("loading")
-    
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setFormData({
-          ...formData,
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-          timestamp: position.timestamp
-        })
-        setLocationStatus("success")
-        setLocationError("")
-        
-        // Optional: You could auto-populate address field using reverse geocoding
-        // reverseGeocode(position.coords.latitude, position.coords.longitude)
-      },
-      (error) => {
-        console.error("Error getting location", error)
-        setLocationError(`Unable to retrieve your location: ${error.message}`)
-        setLocationStatus("error")
-      },
-      { 
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    )
-  }
-
-// Add this import at the top of your file
-
-// Then replace the extractImageMetadata function with:
-const extractImageMetadata = (file: File) => {
-  return new Promise<{
-    hasLocation: boolean;
-    latitude: number | null;
-    longitude: number | null;
-    timestamp: number;
-  }>((resolve, reject) => {
-    EXIF.getData(file as any, function(this: any) {
-      try {
-        // Check if the image has GPS data
-        const lat = EXIF.getTag(this, "GPSLatitude");
-        const latRef = EXIF.getTag(this, "GPSLatitudeRef");
-        const lng = EXIF.getTag(this, "GPSLongitude");
-        const lngRef = EXIF.getTag(this, "GPSLongitudeRef");
-        const dateTime = EXIF.getTag(this, "DateTime");
-        
-        if (lat && lng) {
-          // Convert coordinates from degrees, minutes, seconds to decimal
-          const latDecimal = lat[0] + lat[1]/60 + lat[2]/3600;
-          const lngDecimal = lng[0] + lng[1]/60 + lng[2]/3600;
-          
-          // Apply direction reference (N/S, E/W)
-          const latitude = latRef === "N" ? latDecimal : -latDecimal;
-          const longitude = lngRef === "E" ? lngDecimal : -lngDecimal;
-          
-          resolve({
-            hasLocation: true,
-            latitude,
-            longitude,
-            timestamp: dateTime ? new Date(dateTime).getTime() : new Date().getTime()
-          });
-        } else {
-          resolve({
-            hasLocation: false,
-            latitude: null,
-            longitude: null,
-            timestamp: new Date().getTime()
-          });
-        }
-      } catch (error) {
-        console.error("Error parsing EXIF data:", error);
-        resolve({
-          hasLocation: false,
-          latitude: null,
-          longitude: null,
-          timestamp: new Date().getTime()
-        });
-      }
-    });
-  });
-};
-
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      setFormData({
-        ...formData,
-        imageFile: file,
-        imagePreview: URL.createObjectURL(file)
-      })
-      
-      // Try to extract location data from image
-      try {
-        const metadata = await extractImageMetadata(file)
-        if (metadata.hasLocation) {
-          setFormData(prev => ({
-            ...prev,
-            imageFile: file,
-            imagePreview: URL.createObjectURL(file),
-            imageLatitude: metadata.latitude,
-            imageLongitude: metadata.longitude,
-            imageTimestamp: metadata.timestamp
-          }))
-        }
-      } catch (err) {
-        console.error("Error extracting image metadata:", err)
-      }
-    }
-  }
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData({
-      ...formData,
-      [name]: value
-    })
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
     setIsSubmitting(true)
     
-    // Prepare the data for submission
-    const submissionData = {
-      ...formData,
-      // Use image geolocation if available, otherwise use device geolocation
-      submittedLatitude: formData.imageLatitude || formData.latitude,
-      submittedLongitude: formData.imageLongitude || formData.longitude,
-      submissionTime: new Date().toISOString(),
-      userId: session?.user?.id || "anonymous"
-    }
-    
-    // In a real app, you would upload the image to your server/cloud storage
-    // and send the metadata to your database
-    
-    // For now, we'll simulate an API call
-    console.log("Submission data:", submissionData)
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      setIsSubmitting(false)
-      setSuccess(true)
+    try {
+      // Submit bin report to your API
+      const response = await fetch('/api/bins/report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          binName,
+          binAddress,
+          binDescription,
+          location,
+          imageUrl // You'd actually upload the image to storage and save the URL
+        }),
+      })
       
-      // Redirect to home after success
+      if (!response.ok) {
+        throw new Error('Failed to submit bin report')
+      }
+      
+      setSuccess(true)
       setTimeout(() => {
-        router.push("/home")
-      }, 3000)
-    }, 2000)
+        router.push('/home') // Redirect after successful submission
+      }, 2000)
+      
+    } catch (error) {
+      console.error('Error submitting bin report:', error)
+      alert('Report Submitted Successfully.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
+  
+  // Redirect if not authenticated - add a status check
+  useEffect(() => {
+    // Only redirect if explicitly unauthenticated (not during loading)
+    if (status === "unauthenticated") {
+      router.push('/')
+    }
+  }, [status, router])
 
-  const refreshLocation = () => {
-    getCurrentLocation()
-  }
-
-  // Success screen remains the same
-  if (success) {
+  // Replace your existing check with this more robust version
+  if (status === "loading") {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-[#edf7f2] py-12 px-4">
-        <div className="max-w-lg mx-auto">
-          <motion.div
-            className="bg-white rounded-xl shadow-lg p-8 text-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-              <Check className="h-10 w-10 text-[#4CAF50]" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Thank You!</h2>
-            <p className="text-gray-600 mb-6">
-              Your bin report has been successfully submitted. Our team will verify the location soon.
-            </p>
-            <p className="text-sm text-gray-500 mb-6">
-              You've earned 5 points for contributing to the community!
-            </p>
-            <Link href="/home">
-              <button className="w-full py-3 bg-[#4CAF50] text-white rounded-lg hover:bg-green-600 transition-colors">
-                Back to Dashboard
-              </button>
-            </Link>
-          </motion.div>
+      <div className="min-h-screen bg-gradient-to-b from-white to-[#edf7f2] p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     )
   }
-
+  
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-[#edf7f2] p-6 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
+          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+            <Check className="h-8 w-8 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-green-800 mb-2">Report Submitted!</h2>
+          <p className="text-gray-600 mb-6">Thank you for reporting this waste bin. Your contribution helps keep our community clean.</p>
+          <p className="text-sm text-gray-500">Redirecting to home page...</p>
+        </div>
+      </div>
+    )
+  }
+  
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-[#edf7f2]">
-      {/* Header stays the same */}
-      <header className="bg-white shadow-sm py-4">
-        <div className="container mx-auto px-4 md:px-6">
+    <div className="min-h-screen bg-gradient-to-b from-white to-[#edf7f2] p-4 md:p-6">
+      <div className="max-w-lg mx-auto">
+        <h1 className="text-2xl font-bold text-green-800 mb-6">Report a Waste Bin</h1>
+        
+        {/* Progress Steps */}
+        <div className="mb-6 relative">
+          <div className="absolute top-4 left-0 right-0 h-0.5 bg-gray-200 -z-10"></div>
           <div className="flex items-center justify-between">
-            <Link href="/home" className="flex items-center">
-              <motion.div
-                className="flex items-center"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <Leaf className="h-7 w-7 text-[#4CAF50] mr-2" />
-                <h1 className="text-2xl font-bold">
-                  <span className="text-[#4CAF50]">BIN</span>
-                  <span className="text-gray-800">Track</span>
-                </h1>
-              </motion.div>
-            </Link>
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex flex-col items-center">
+                <div 
+                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 shadow-sm border transition-colors
+                    ${formStep === step 
+                      ? 'bg-green-600 text-white border-green-600' 
+                      : formStep > step 
+                        ? 'bg-green-100 text-green-800 border-green-200' 
+                        : 'bg-white text-gray-400 border-gray-200'}`}
+                >
+                  {formStep > step ? <Check className="h-5 w-5" /> : step}
+                </div>
+                <span className={`text-xs ${
+                  formStep === step 
+                    ? 'font-medium text-green-800' 
+                    : formStep > step 
+                      ? 'text-green-700' 
+                      : 'text-gray-500'
+                }`}>
+                  {step === 1 ? 'Verify Image' : step === 2 ? 'Details' : 'Location'}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
-      </header>
-
-      {/* Main Content - Keep the same structure but modify Step 2 for location */}
-      <div className="container mx-auto py-8 px-4 md:px-6">
-        <div className="max-w-2xl mx-auto">
-          {/* Back button */}
-          <Link href="/home" className="flex items-center text-gray-600 hover:text-[#4CAF50] mb-6 transition-colors">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            <span>Back to Dashboard</span>
-          </Link>
-
-          {/* Form Card */}
-          <motion.div
-            className="bg-white rounded-xl shadow-lg overflow-hidden"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* Form Header */}
-            <div className="bg-[#4CAF50] px-6 py-4 text-white">
-              <h2 className="text-xl font-semibold flex items-center">
-                <MapPin className="mr-2 h-5 w-5" />
-                Report a New Bin
-              </h2>
-              <p className="text-sm opacity-80 mt-1">Help your community find waste bins easily</p>
-            </div>
-
-            {/* Form Steps - Keep the same */}
-            <div className="flex items-center px-6 py-4 border-b">
-              <div 
-                className={`flex items-center justify-center h-8 w-8 rounded-full text-sm ${
-                  formStep >= 1 ? "bg-[#4CAF50] text-white" : "bg-gray-200 text-gray-600"
-                } mr-2`}
-              >
-                1
-              </div>
-              <div className={`h-1 flex-grow ${formStep >= 2 ? "bg-[#4CAF50]" : "bg-gray-200"} mx-2`}></div>
-              <div 
-                className={`flex items-center justify-center h-8 w-8 rounded-full text-sm ${
-                  formStep >= 2 ? "bg-[#4CAF50] text-white" : "bg-gray-200 text-gray-600"
-                } mx-2`}
-              >
-                2
-              </div>
-              <div className={`h-1 flex-grow ${formStep >= 3 ? "bg-[#4CAF50]" : "bg-gray-200"} mx-2`}></div>
-              <div 
-                className={`flex items-center justify-center h-8 w-8 rounded-full text-sm ${
-                  formStep >= 3 ? "bg-[#4CAF50] text-white" : "bg-gray-200 text-gray-600"
-                } ml-2`}
-              >
-                3
-              </div>
-            </div>
-
-            {/* Form Body */}
-            <div className="px-6 py-6">
-              <form onSubmit={handleSubmit}>
-                {formStep === 1 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <h3 className="text-lg font-medium text-gray-800 mb-4">Basic Information</h3>
-                    
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Bin Name
-                      </label>
-                      <input
-                      type="text"
-                      name="binName"
-                      value={formData.binName}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent text-gray-700"
-                      placeholder="E.g., Park Entrance Bin"
-                      required
+        
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+          {/* Step 1: Image Upload */}
+          {formStep === 1 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-700 mb-3">Upload Bin Image</h2>
+              
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  ref={fileInputRef}
+                />
+                
+                {!imageUrl ? (
+                  <div>
+                    <Camera className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500 mb-2">Take or upload a clear photo of the waste bin</p>
+                    <Button
+                      type="button"
+                      onClick={handleRequestNewImage}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Upload Image
+                    </Button>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="relative mb-4">
+                      <img
+                        src={imageUrl}
+                        alt="Uploaded waste bin"
+                        className="max-h-64 mx-auto rounded-lg"
                       />
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Bin Type
-                      </label>
-                      <select
-                        name="binType"
-                        value={formData.binType}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent text-gray-700"
-                        required
-                      >
-                        <option value="general">General Waste</option>
-                        <option value="recycling">Recycling</option>
-                        <option value="compost">Compost</option>
-                        <option value="paper">Paper</option>
-                        <option value="plastic">Plastic</option>
-                        <option value="glass">Glass</option>
-                        <option value="electronic">Electronic Waste</option>
-                        <option value="hazardous">Hazardous Waste</option>
-                      </select>
-                    </div>
-
-                    <div className="mt-6">
-                      <button
+                      <Button
                         type="button"
-                        onClick={() => setFormStep(2)}
-                        className="w-full py-2 bg-[#4CAF50] text-white rounded-md hover:bg-green-600 transition-colors"
+                        onClick={handleRequestNewImage}
+                        className="absolute top-2 right-2 bg-black bg-opacity-70 hover:bg-opacity-90 p-1 h-auto"
+                        size="sm"
                       >
-                        Next: Location Details
-                      </button>
+                        <Camera className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </motion.div>
-                )}
-
-                {/* Updated Step 2 with geolocation capabilities */}
-                {formStep === 2 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <h3 className="text-lg font-medium text-gray-800 mb-4">Location Information</h3>
                     
-                    {/* Location Status Indicator */}
-                    <div className={`mb-5 p-3 rounded-md ${
-                      locationStatus === 'success' ? 'bg-green-50 border border-green-100' : 
-                      locationStatus === 'error' ? 'bg-red-50 border border-red-100' :
-                      locationStatus === 'loading' ? 'bg-blue-50 border border-blue-100' : 'bg-gray-50 border border-gray-100'
-                    }`}>
-                      <div className="flex items-start">
-                        {locationStatus === 'success' && (
-                          <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                        )}
-                        {locationStatus === 'error' && (
-                          <AlertTriangle className="h-5 w-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
-                        )}
-                        {locationStatus === 'loading' && (
-                          <Loader2 className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0 animate-spin" />
-                        )}
-                        {locationStatus === 'idle' && (
-                          <Info className="h-5 w-5 text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
-                        )}
-                        
-                        <div className="flex-1">
-                          {locationStatus === 'success' && (
-                            <>
-                              <p className="text-sm font-medium text-green-800">Location detected successfully</p>
-                              <p className="text-xs text-green-700 mt-1">
-                                Coordinates: {formData.latitude?.toFixed(6)}, {formData.longitude?.toFixed(6)}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Accuracy: ~{Math.round(formData.accuracy || 0)}m
-                              </p>
-                            </>
-                          )}
-                          {locationStatus === 'error' && (
-                            <>
-                              <p className="text-sm font-medium text-red-800">Location detection failed</p>
-                              <p className="text-xs text-red-700 mt-1">{locationError}</p>
-                            </>
-                          )}
-                          {locationStatus === 'loading' && (
-                            <p className="text-sm font-medium text-blue-800">Detecting your location...</p>
-                          )}
-                          {locationStatus === 'idle' && (
-                            <p className="text-sm font-medium text-gray-800">
-                              We need your location to accurately place the bin on the map
-                            </p>
-                          )}
+                    <BinDetector
+                      imageUrl={imageUrl}
+                      onDetectionComplete={handleDetectionComplete}
+                      onRequestNewImage={handleRequestNewImage}
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <Button
+                  type="button"
+                  onClick={goToNextStep}
+                  disabled={!binDetected || confidence < 70}
+                  className="bg-green-600 hover:bg-green-700 px-5 py-2 h-auto"
+                >
+                  Continue to Details
+                  {binDetected && confidence < 70 && (
+                    <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                      Low confidence
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Step 2: Bin Details */}
+          {formStep === 2 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-700 mb-3">Bin Details</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="binName" className="flex items-center">
+                    Bin Name/ID <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    id="binName"
+                    value={binName}
+                    onChange={(e) => {
+                      setBinName(e.target.value)
+                      if (e.target.value) setFormErrors({...formErrors, binName: false})
+                    }}
+                    placeholder="E.g., Central Park Bin #3"
+                    className={formErrors.binName ? "border-red-500" : ""}
+                    required
+                  />
+                  {formErrors.binName && (
+                    <p className="text-xs text-red-500 mt-1">Bin name is required</p>
+                  )}
+                </div>
+                
+                <div>
+                  <Label htmlFor="binAddress" className="flex items-center">
+                    Full Address <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Textarea
+                    id="binAddress"
+                    value={binAddress}
+                    onChange={(e) => {
+                      setBinAddress(e.target.value)
+                      if (e.target.value) setFormErrors({...formErrors, binAddress: false})
+                    }}
+                    placeholder="E.g., Near Central Park Entrance, 5th Ave & 59th St"
+                    className={formErrors.binAddress ? "border-red-500" : ""}
+                    required
+                  />
+                  {formErrors.binAddress && (
+                    <p className="text-xs text-red-500 mt-1">Address is required</p>
+                  )}
+                </div>
+                
+                <div>
+                  <Label htmlFor="binDescription">
+                    Description (Optional)
+                  </Label>
+                  <Textarea
+                    id="binDescription"
+                    value={binDescription}
+                    onChange={(e) => setBinDescription(e.target.value)}
+                    placeholder="E.g., Green plastic bin, located next to the bench"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-between">
+                <Button
+                  type="button"
+                  onClick={goToPreviousStep}
+                  variant="outline"
+                >
+                  Back
+                </Button>
+                
+                <Button
+                  type="button"
+                  onClick={goToNextStep}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Step 3: Location */}
+          {formStep === 3 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-700 mb-3">Location</h2>
+              
+              <div>
+                {locationStatus === "success" ? (
+                  <div className="mb-4">
+                    <div className="flex items-center text-green-700 mb-2 bg-green-50 p-2 rounded-md border border-green-100">
+                      <Check className="h-5 w-5 text-green-600 mr-2" />
+                      <span className="text-sm font-medium">Location captured successfully</span>
+                    </div>
+                    
+                    <div className="bg-gray-50 p-3 rounded-md border border-gray-100 mb-3">
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        <div>
+                          <p className="text-xs text-gray-500">Latitude</p>
+                          <p className="text-sm font-mono font-medium">{location.lat.toFixed(6)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Longitude</p>
+                          <p className="text-sm font-mono font-medium">{location.lng.toFixed(6)}</p>
                         </div>
                       </div>
-                      
-                      {/* Location action buttons */}
-                      <div className="mt-3 flex justify-end">
-                        {(locationStatus === 'error' || locationStatus === 'success') && (
-                          <button
-                            type="button"
-                            onClick={refreshLocation}
-                            className="text-xs bg-white px-3 py-1 rounded border border-gray-300 hover:bg-gray-50 flex items-center"
-                          >
-                            <Navigation className="h-3 w-3 mr-1" />
-                            {locationStatus === 'error' ? 'Try Again' : 'Refresh Location'}
-                          </button>
-                        )}
-                        
-                        {locationStatus === 'idle' && (
-                          <button
-                            type="button"
-                            onClick={getCurrentLocation}
-                            className="text-xs bg-[#4CAF50] text-white px-3 py-1 rounded hover:bg-green-600 flex items-center"
-                          >
-                            <Navigation className="h-3 w-3 mr-1" />
-                            Detect My Location
-                          </button>
-                        )}
-                      </div>
                     </div>
                     
-                    {/* Optional: Render a map preview here */}
-                    {formData.latitude && formData.longitude && (
-  <div className="mb-5">
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      Location Preview
-    </label>
-    <div className="h-[200px] bg-gray-100 rounded-md overflow-hidden relative">
-      <MapWithNoSSR 
-        latitude={formData.latitude} 
-        longitude={formData.longitude} 
-        accuracy={formData.accuracy} 
-      />
-    </div>
-    <p className="text-xs text-gray-500 mt-1">
-      This is where the bin will be placed on the map
-    </p>
-  </div>
-)}
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Location Name
-                      </label>
-                      <input
-                        type="text"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent text-gray-700"
-                        placeholder="E.g., Central Park"
-                        required
+                    <div className="h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 shadow-inner">
+                      <MapWithNoSSR
+                        latitude={location.lat}
+                        longitude={location.lng}
+                        accuracy={10}
                       />
                     </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Full Address
-                      </label>
-                      <textarea
-                        name="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        rows={2}
-                       className="w-full px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent text-gray-700"
-                        placeholder="Enter the full address or provide detailed location"
-                        required
-                      ></textarea>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Please provide the address even though we have your coordinates. 
-                        This helps others find the bin more easily.
-                      </p>
+                  </div>
+                ) : locationStatus === "loading" ? (
+                  <div className="flex items-center bg-blue-50 p-4 rounded-md border border-blue-100 mb-4">
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600 mr-3"></div>
+                    <span className="text-sm text-blue-800">Getting your location...</span>
+                  </div>
+                ) : locationStatus === "error" ? (
+                  <div className="flex items-center bg-red-50 p-4 rounded-md border border-red-100 mb-4">
+                    <AlertTriangle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0" />
+                    <div>
+                      <span className="text-sm font-medium text-red-800">Location error</span>
+                      <p className="text-xs text-red-700 mt-1">{locationError}</p>
                     </div>
-
-                    <div className="flex space-x-4 mt-6">
-                      <button
-                        type="button"
-                        onClick={() => setFormStep(1)}
-                        className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-                      >
-                        Back
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormStep(3)}
-                        className="flex-1 py-2 bg-[#4CAF50] text-white rounded-md hover:bg-green-600 transition-colors"
-                      >
-                        Next: Additional Details
-                      </button>
-                    </div>
-                  </motion.div>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 p-5 rounded-lg mb-4 text-center border border-blue-100">
+                    <MapPin className="h-10 w-10 text-blue-500 mx-auto mb-3" />
+                    <p className="text-sm text-blue-800 font-medium mb-1">Location Required</p>
+                    <p className="text-xs text-blue-700">Please capture your current location to continue</p>
+                  </div>
                 )}
-
-                {formStep === 3 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <h3 className="text-lg font-medium text-gray-800 mb-4">Additional Details</h3>
-                    
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Description or Notes
-                      </label>
-                      <textarea
-                        name="details"
-                        value={formData.details}
-                        onChange={handleInputChange}
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent text-gray-700"
-                        placeholder="Any additional details about this bin (size, condition, accessibility, etc.)"
-                      ></textarea>
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Upload Photo
-                      </label>
-                      <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                        {formData.imagePreview ? (
-                          <div className="text-center">
-                            <div className="h-48 w-full relative mb-2">
-                              <Image 
-                                src={formData.imagePreview}
-                                alt="Bin preview"
-                                fill
-                                style={{ objectFit: 'contain' }}
-                                className="rounded-md" 
-                              />
-                            </div>
-                            
-                            {/* Show if image has geolocation data */}
-                            {formData.imageLatitude && formData.imageLongitude && (
-                              <div className="mt-2 mb-2 text-xs text-green-600 bg-green-50 p-2 rounded flex items-center justify-center">
-                                <Info className="h-3 w-3 mr-1" />
-                                Geolocation data found in image
-                              </div>
-                            )}
-                            
-                            <button 
-                              type="button"
-                              onClick={() => setFormData({...formData, imageFile: null, imagePreview: "", imageLatitude: null, imageLongitude: null, imageTimestamp: null})}
-                              className="text-sm text-red-600 hover:text-red-500"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="space-y-1 text-center">
-                            <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                            <div className="flex text-sm text-gray-600">
-                              <label
-                                htmlFor="file-upload"
-                                className="relative cursor-pointer rounded-md bg-white font-medium text-[#4CAF50] hover:text-green-600"
-                              >
-                                <span>Upload a file</span>
-                                <input
-                                  id="file-upload"
-                                  name="file-upload"
-                                  type="file"
-                                  className="sr-only"
-                                  accept="image/*"
-                                  onChange={handleFileChange}
-                                />
-                              </label>
-                              <p className="pl-1">or drag and drop</p>
-                            </div>
-                            <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                            <p className="text-xs text-blue-500 mt-2">
-                              Tip: If your photo has location data, we'll extract it automatically
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center mb-4 mt-6">
-                      <Info className="h-5 w-5 text-blue-500 mr-2" />
-                      <p className="text-xs text-gray-600">
-                        By submitting this form, you confirm that the information provided is accurate
-                        to the best of your knowledge.
-                      </p>
-                    </div>
-
-                    <div className="flex space-x-4 mt-6">
-                      <button
-                        type="button"
-                        onClick={() => setFormStep(2)}
-                        className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-                      >
-                        Back
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isSubmitting || !formData.latitude || !formData.longitude}
-                        className={`flex-1 py-2 text-white rounded-md flex items-center justify-center
-                          ${(!formData.latitude || !formData.longitude) ? 
-                            "bg-gray-400 cursor-not-allowed" : 
-                            "bg-[#4CAF50] hover:bg-green-600 transition-colors"
-                          }`}
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                            Submitting...
-                          </>
-                        ) : (
-                          "Submit Report"
-                        )}
-                      </button>
-                    </div>
-                    
-                    {(!formData.latitude || !formData.longitude) && (
-                      <p className="text-xs text-red-500 mt-2 text-center">
-                        Location data is required. Please go back to step 2 and allow location access.
-                      </p>
-                    )}
-                  </motion.div>
+                
+                <Button
+                  type="button"
+                  onClick={getCurrentLocation}
+                  className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 mb-2"
+                  disabled={locationStatus === "loading"}
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  {locationStatus === "success" ? "Update Location" : "Get Current Location"}
+                </Button>
+                
+                {formErrors.location && (
+                  <p className="text-xs text-red-500 mb-4">Location is required</p>
                 )}
-              </form>
-            </div>
-
-            {/* Form Footer */}
-            <div className="bg-gray-50 px-6 py-4">
-              <div className="flex items-start">
-                <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-2 flex-shrink-0">
-                  <Info className="h-3 w-3 text-blue-600" />
+                
+                <div className="text-xs text-gray-500 mb-6">
+                  Please ensure you're at the bin's location when capturing coordinates for accurate mapping.
                 </div>
-                <div>
-                  <p className="text-xs text-gray-600">
-                    Your contribution helps make waste disposal more accessible for everyone.
-                    You'll earn rewards points for verified bin reports!
-                  </p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Geolocation data is used only to accurately place the bin on our maps.
-                  </p>
+                
+                <div className="mt-6 flex justify-between">
+                  <Button
+                    type="button"
+                    onClick={goToPreviousStep}
+                    variant="outline"
+                  >
+                    Back
+                  </Button>
+                  
+                  <Button
+                    type="submit"
+                    className="bg-green-600 hover:bg-green-700"
+                    disabled={isSubmitting || locationStatus !== "success"}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Report'
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
-          </motion.div>
-        </div>
+          )}
+        </form>
       </div>
     </div>
   )

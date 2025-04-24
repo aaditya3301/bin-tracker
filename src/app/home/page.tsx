@@ -6,6 +6,22 @@ import { Search, User, MapPin, Plus, Leaf, ArrowRight } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
+import dynamic from 'next/dynamic'
+
+const NearbyBinsMap = dynamic(
+  () => import('@/components/NearbyBinsMap'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="bg-gray-100 h-[300px] rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500 mx-auto mb-3"></div>
+          <p className="text-gray-500">Loading map...</p>
+        </div>
+      </div>
+    )
+  }
+);
 
 export default function HomePage() {
   const { data: session, status } = useSession()
@@ -16,12 +32,16 @@ export default function HomePage() {
     tasksCompleted: 0,
   })
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated - with improved logging and conditional handling
   useEffect(() => {
+    console.log("Auth status:", status, "Session:", session);
+    
+    // Only redirect if explicitly unauthenticated
     if (status === "unauthenticated") {
+      console.log("User is unauthenticated, redirecting to login");
       router.push("/")
     }
-  }, [status, router])
+  }, [status, router, session])
 
   // Loading state
   if (status === "loading") {
@@ -237,16 +257,8 @@ export default function HomePage() {
               </Link>
             </div>
             
-            <div className="bg-gray-100 h-[300px] rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500">Interactive map will be displayed here</p>
-                <Link href="/map">
-                  <button className="mt-4 px-4 py-2 bg-[#4CAF50] text-white rounded-lg hover:bg-green-600 transition-colors">
-                    Open Map
-                  </button>
-                </Link>
-              </div>
+            <div className="bg-gray-100 h-[300px] rounded-lg overflow-hidden">
+              <NearbyBinsMap height="300px" />
             </div>
           </motion.div>
 
