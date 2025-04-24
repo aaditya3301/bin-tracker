@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import BinDetector from '@/components/BinDetector'
-import { Loader2, MapPin, Camera, Check, AlertTriangle } from 'lucide-react'
+import { Loader2, MapPin, Camera, Check, AlertTriangle, ArrowLeft } from 'lucide-react'
 
 // Import your UI components
 import { Button } from '@/components/ui/button'
@@ -19,14 +20,14 @@ const MapWithNoSSR = dynamic(
 );
 
 export default function BinReportPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formStep, setFormStep] = useState(1)
   const [success, setSuccess] = useState(false)
   const [locationError, setLocationError] = useState("")
   const [locationStatus, setLocationStatus] = useState("idle")
-  const [confidence, setConfidence] = useState(0) // Add the confidence state here
+  const [confidence, setConfidence] = useState(0)
   
   // Form fields
   const [imageUrl, setImageUrl] = useState("")
@@ -185,15 +186,24 @@ export default function BinReportPage() {
     }
   }
   
-  // Redirect if not authenticated
+  // Redirect if not authenticated - add a status check
   useEffect(() => {
-    if (!session) {
+    // Only redirect if explicitly unauthenticated (not during loading)
+    if (status === "unauthenticated") {
       router.push('/')
     }
-  }, [session, router])
-  
-  if (!session) {
-    return null
+  }, [status, router])
+
+  // Replace your existing check with this more robust version
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-[#edf7f2] p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
   }
   
   if (success) {
@@ -217,36 +227,36 @@ export default function BinReportPage() {
         <h1 className="text-2xl font-bold text-green-800 mb-6">Report a Waste Bin</h1>
         
         {/* Progress Steps */}
-<div className="mb-6 relative">
-  <div className="absolute top-4 left-0 right-0 h-0.5 bg-gray-200 -z-10"></div>
-  <div className="flex items-center justify-between">
-    {[1, 2, 3].map((step) => (
-      <div key={step} className="flex flex-col items-center">
-        <div 
-          className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 shadow-sm border transition-colors
-            ${formStep === step 
-              ? 'bg-green-600 text-white border-green-600' 
-              : formStep > step 
-                ? 'bg-green-100 text-green-800 border-green-200' 
-                : 'bg-white text-gray-400 border-gray-200'}`}
-        >
-          {formStep > step ? <Check className="h-5 w-5" /> : step}
+        <div className="mb-6 relative">
+          <div className="absolute top-4 left-0 right-0 h-0.5 bg-gray-200 -z-10"></div>
+          <div className="flex items-center justify-between">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex flex-col items-center">
+                <div 
+                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 shadow-sm border transition-colors
+                    ${formStep === step 
+                      ? 'bg-green-600 text-white border-green-600' 
+                      : formStep > step 
+                        ? 'bg-green-100 text-green-800 border-green-200' 
+                        : 'bg-white text-gray-400 border-gray-200'}`}
+                >
+                  {formStep > step ? <Check className="h-5 w-5" /> : step}
+                </div>
+                <span className={`text-xs ${
+                  formStep === step 
+                    ? 'font-medium text-green-800' 
+                    : formStep > step 
+                      ? 'text-green-700' 
+                      : 'text-gray-500'
+                }`}>
+                  {step === 1 ? 'Verify Image' : step === 2 ? 'Details' : 'Location'}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-        <span className={`text-xs ${
-          formStep === step 
-            ? 'font-medium text-green-800' 
-            : formStep > step 
-              ? 'text-green-700' 
-              : 'text-gray-500'
-        }`}>
-          {step === 1 ? 'Verify Image' : step === 2 ? 'Details' : 'Location'}
-        </span>
-      </div>
-    ))}
-  </div>
-</div>
         
-<form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
           {/* Step 1: Image Upload */}
           {formStep === 1 && (
             <div>

@@ -26,6 +26,11 @@ const nextConfig = {
     serverComponentsExternalPackages: [],
     webAssemblyModulesLoader: true,
   },
-}
+  images: {
+    domains: [
+      'lh3.googleusercontent.com', // For Google OAuth profile images
+    ],
+  },
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
