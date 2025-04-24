@@ -9,7 +9,6 @@ import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 
 
-// Dynamically import ThreeScene component with no SSR
 const ThreeSceneWithNoSSR = dynamic(
   () => import('../components/ThreeScene'),
   { ssr: false }
@@ -33,7 +32,7 @@ const features = [
     description: "Get rewards for responsible waste disposal and reporting.",
     icon: "🏆"
   },
-  // Add more features as needed
+  
 ];
 
 export default function Home() {

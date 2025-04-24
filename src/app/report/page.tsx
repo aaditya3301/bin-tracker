@@ -350,16 +350,16 @@ const extractImageMetadata = (file: File) => {
                     
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Bin Name
+                      Bin Name
                       </label>
                       <input
-                        type="text"
-                        name="binName"
-                        value={formData.binName}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
-                        placeholder="E.g., Park Entrance Bin"
-                        required
+                      type="text"
+                      name="binName"
+                      value={formData.binName}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent text-gray-700"
+                      placeholder="E.g., Park Entrance Bin"
+                      required
                       />
                     </div>
 
@@ -371,7 +371,7 @@ const extractImageMetadata = (file: File) => {
                         name="binType"
                         value={formData.binType}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent text-gray-700"
                         required
                       >
                         <option value="general">General Waste</option>
@@ -509,7 +509,7 @@ const extractImageMetadata = (file: File) => {
                         name="location"
                         value={formData.location}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent text-gray-700"
                         placeholder="E.g., Central Park"
                         required
                       />
@@ -524,7 +524,7 @@ const extractImageMetadata = (file: File) => {
                         value={formData.address}
                         onChange={handleInputChange}
                         rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+                       className="w-full px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent text-gray-700"
                         placeholder="Enter the full address or provide detailed location"
                         required
                       ></textarea>
@@ -570,7 +570,7 @@ const extractImageMetadata = (file: File) => {
                         value={formData.details}
                         onChange={handleInputChange}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent text-gray-700"
                         placeholder="Any additional details about this bin (size, condition, accessibility, etc.)"
                       ></textarea>
                     </div>
