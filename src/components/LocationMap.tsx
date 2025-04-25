@@ -21,11 +21,23 @@ export default function LocationMap({
   latitude,
   longitude,
   accuracy = 50
+}: {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
 }) {
-  const [map, setMap] = useState(null)
+  const [map, setMap] = useState<L.Map | null>(null)
   
   // Dynamically load Leaflet components only on client-side
-  const [leafletModules, setLeafletModules] = useState(null)
+  interface LeafletModules {
+    MapContainer: React.ComponentType<any>;
+    TileLayer: React.ComponentType<any>;
+    Marker: React.ComponentType<any>;
+    Popup: React.ComponentType<any>;
+    Circle: React.ComponentType<any>;
+  }
+  
+  const [leafletModules, setLeafletModules] = useState<LeafletModules | null>(null)
   
   useEffect(() => {
     // Dynamically import Leaflet components in useEffect to avoid SSR issues
@@ -54,7 +66,7 @@ export default function LocationMap({
       zoom={15} 
       style={{ height: '100%', width: '100%' }}
       scrollWheelZoom={false}
-      whenReady={(map) => setMap(map.target)}
+      whenReady={(map: L.LeafletEvent) => setMap(map.target)}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

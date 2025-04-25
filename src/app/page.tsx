@@ -36,7 +36,7 @@ const features = [
 ];
 
 export default function Home() {
-  const [coins, setCoins] = useState([]);
+  const [coins, setCoins] = useState<{id: string; style: {left: string; animationDelay: string}}[]>([]);
   const handleGetStarted = () => {
     signIn('google', { callbackUrl: '/home' });
   };

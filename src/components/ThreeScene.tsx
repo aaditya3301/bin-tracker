@@ -130,7 +130,7 @@ export default function ThreeScene() {
         
         const startTime = Date.now();
         
-        function jump() {
+        const jump = () => {
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / jumpDuration, 1);
           
@@ -143,7 +143,7 @@ export default function ThreeScene() {
           } else {
             bin.position.y = originalY;
           }
-        }
+        };
         
         jump();
       }

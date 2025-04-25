@@ -1,12 +1,3 @@
-import * as ort from 'onnxruntime-web';
-
-// Configure to use CDN-hosted WASM files
-ort.env.wasm.wasmPaths = {
-  'ort-wasm.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm.wasm',
-  'ort-wasm-simd.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm-simd.wasm',
-  'ort-wasm-threaded.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm-threaded.wasm',
-};
-
 // Single class for trash bins
 const CLASS_NAME = 'trash-bins';
 
@@ -16,6 +7,38 @@ interface DetectionResult {
   bbox: [number, number, number, number]; // [x, y, width, height]
 }
 
+let ortModule: any = null;
+
+// Load ONNX Runtime only on client side
+const loadOrtModule = async () => {
+  if (typeof window === 'undefined') {
+    return null; // Skip on server side
+  }
+  
+  if (ortModule) {
+    return ortModule; // Return cached module if already loaded
+  }
+
+  try {
+    // Dynamic import only runs on client side
+    const ort = await import('onnxruntime-web');
+    
+    // Configure WASM paths
+    ort.env.wasm.wasmPaths = {
+      'ort-wasm.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm.wasm',
+      'ort-wasm-simd.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm-simd.wasm',
+      'ort-wasm-threaded.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm-threaded.wasm',
+      'ort-wasm-simd-threaded.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm-simd-threaded.wasm',
+    } as Record<string, string>;
+    
+    ortModule = ort;
+    return ort;
+  } catch (error) {
+    console.error("Failed to load ONNX Runtime:", error);
+    return null;
+  }
+};
+
 export async function detectBin(imageElement: HTMLImageElement): Promise<{
   isBin: boolean;
   detections: DetectionResult[];
@@ -23,6 +46,12 @@ export async function detectBin(imageElement: HTMLImageElement): Promise<{
 }> {
   try {
     console.log("Starting bin detection...");
+    
+    // Load ONNX Runtime first
+    const ort = await loadOrtModule();
+    if (!ort) {
+      throw new Error("Failed to load ONNX Runtime");
+    }
     
     const modelPath = '/models/hi.onnx';
     console.log(`Loading model from: ${modelPath}`);
@@ -38,11 +67,11 @@ export async function detectBin(imageElement: HTMLImageElement): Promise<{
     const inputName = modelInputs[0]; // Use the first input name
     
     // Preprocess image for YOLOv11n - 640x640 is standard YOLOv11 input size
-    const tensor = await preprocessImage(imageElement, 640, 640);
+    const tensor = await preprocessImage(imageElement, 640, 640, ort);
     console.log("Image preprocessed");
     
     // Run inference with the correct input name
-    const feeds = {};
+    const feeds: Record<string, any> = {};
     feeds[inputName] = tensor;
     console.log(`Running inference with input name '${inputName}'...`);
     
@@ -68,7 +97,7 @@ export async function detectBin(imageElement: HTMLImageElement): Promise<{
     return {
       isBin,
       detections,
-      highestConfidence
+      highestConfidence: highestConfidence * 100 // Convert to percentage
     };
   } catch (error) {
     console.error("Error detecting bin:", error);
@@ -81,7 +110,7 @@ export async function detectBin(imageElement: HTMLImageElement): Promise<{
 }
 
 // Preprocessing function for YOLOv11n
-async function preprocessImage(img: HTMLImageElement, width: number, height: number): Promise<ort.Tensor> {
+async function preprocessImage(img: HTMLImageElement, width: number, height: number, ort: any): Promise<any> {
   // Create a canvas for image preprocessing
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -118,7 +147,7 @@ async function preprocessImage(img: HTMLImageElement, width: number, height: num
 }
 
 // Process YOLOv11n results specifically for the [1,5,8400] output format
-function processYolo11Results(results: ort.InferenceSession.ReturnType, imgWidth: number, imgHeight: number): DetectionResult[] {
+function processYolo11Results(results: any, imgWidth: number, imgHeight: number): DetectionResult[] {
   // Get the output - typically named "output0" in YOLO ONNX models
   const outputName = Object.keys(results)[0];
   const output = results[outputName];

@@ -14,8 +14,9 @@ const fixLeafletIcons = () => {
   if (typeof window !== 'undefined') {
     // Dynamically import Leaflet
     import('leaflet').then((L) => {
-      // Fix icon paths
-      delete L.Icon.Default.prototype._getIconUrl;
+      // Fix icon paths using type assertion to bypass TypeScript check
+      // This is safe as _getIconUrl exists in the runtime Leaflet object
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
         iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',

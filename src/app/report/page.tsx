@@ -343,22 +343,6 @@ export default function BinReportPage() {
                     </div>
                   ) : (
                     <div>
-                      <div className="relative mb-4">
-                        <img
-                          src={imageUrl}
-                          alt="Uploaded waste bin"
-                          className="max-h-64 mx-auto rounded-lg"
-                        />
-                        <Button
-                          type="button"
-                          onClick={handleRequestNewImage}
-                          className="absolute top-2 right-2 bg-black bg-opacity-70 hover:bg-opacity-90 p-1 h-auto"
-                          size="sm"
-                        >
-                          <Camera className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      
                       <BinDetector
                         imageUrl={imageUrl}
                         onDetectionComplete={handleDetectionComplete}
