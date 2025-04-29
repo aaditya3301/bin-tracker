@@ -1,0 +1,32 @@
+{
+  "name": "Bin Hunter Badge",
+  "description": "This prestigious BinTrack badge recognizes your commitment to finding and reporting waste bins in your community. Awarded for discovering 10 waste bins.",
+  "image": "ipfs://QmW5StCd5v5DqSYufGTeUv4R5sxNHgetcxnQ8gQVX2tw32",
+  "external_url": "https://bintrack.app/rewards",
+  "attributes": [
+    {
+      "trait_type": "Reward Type",
+      "value": "Badge"
+    },
+    {
+      "trait_type": "Badge Name",
+      "value": "Bin Hunter"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Rare"
+    },
+    {
+      "trait_type": "Bins Required",
+      "value": "10"
+    },
+    {
+      "trait_type": "Achievement",
+      "value": "Located 10 waste bins"
+    },
+    {
+      "trait_type": "Rank",
+      "value": "Silver"
+    }
+  ]
+}

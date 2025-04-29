@@ -1,0 +1,22 @@
+{
+  "coupons": {
+    "zomato-coupon": {
+      "imageCID": "QmTS4zUWHGtRDggBiNHc76fsJSXv61jiwqcoPV33HycP6B",
+      "metadataCID": "QmRYJ2v7KtCfx4PCMaKNjib5NeHUtqw5XYZUWsBUGZrfxw"
+    },
+    "myntra-coupon": {
+      "imageCID": "QmashT39Bxb6MoCCyZQXq4vu8U2ojNd3Yw12YaEza67y1i",
+      "metadataCID": "QmPs1sN5AaGLsuxSU6HPFbUGDb4DZMiZyBQJzXhcYc5xTE"
+    }
+  },
+  "badges": {
+    "bin-hunter-badge": {
+      "imageCID": "QmW5StCd5v5DqSYufGTeUv4R5sxNHgetcxnQ8gQVX2tw32",
+      "metadataCID": "QmTHmYYDtSBkoEW7nfwonk7yND7s3uxLqtczSHRZznMpxr"
+    },
+    "community-hero-badge": {
+      "imageCID": "QmZmEK3bz5NwkynG6A75wNBcYZRQV6oD3vgas7c6WHTMsp",
+      "metadataCID": "QmXsv5EHsxuS2fQ8PcBsL63ZaqFZ1tpBC5zyoCcLABCDUP"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "Zomato 15% Discount Coupon",
+  "description": "This exclusive BinTrack NFT coupon gives you 15% off on your next Zomato order. Earned by contributing to cleaner communities through bin tracking.",
+  "image": "ipfs://QmTS4zUWHGtRDggBiNHc76fsJSXv61jiwqcoPV33HycP6B",
+  "external_url": "https://bintrack.app/rewards",
+  "attributes": [
+    {
+      "trait_type": "Reward Type",
+      "value": "Coupon"
+    },
+    {
+      "trait_type": "Partner",
+      "value": "Zomato"
+    },
+    {
+      "trait_type": "Discount",
+      "value": "15%"
+    },
+    {
+      "trait_type": "Bins Required",
+      "value": "1"
+    },
+    {
+      "display_type": "date",
+      "trait_type": "Expiration Date",
+      "value": 1767225600
+    }
+  ]
+}
