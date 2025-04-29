@@ -1,19 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ComponentProps } from 'react';
 import dynamic from 'next/dynamic';
 import Navbar from '../components/Navbar';
 import styles from '../styles/Home.module.css';
 import Image from "next/image";
-import { signIn } from 'next-auth/react';
 import Link from 'next/link';
-
+import { useRouter } from 'next/navigation';
 
 const ThreeSceneWithNoSSR = dynamic(
   () => import('../components/ThreeScene'),
   { ssr: false }
 );
-
 
 // Feature data
 const features = [
@@ -35,10 +33,26 @@ const features = [
   
 ];
 
+type NavbarWithAuthProps = ComponentProps<typeof Navbar> & {
+  onLoginClick?: () => void;
+  onSignupClick?: () => void;
+};
+
+const NavbarWithAuth = Navbar as React.ComponentType<NavbarWithAuthProps>;
+
 export default function Home() {
   const [coins, setCoins] = useState<{id: string; style: {left: string; animationDelay: string}}[]>([]);
+  const router = useRouter();
+  
   const handleGetStarted = () => {
-    signIn('google', { callbackUrl: '/home' });
+    // Direct navigation to home page instead of authentication
+    router.push('/home');
+  };
+
+  // Function to handle login/signup - pass to Navbar
+  const handleAuth = () => {
+    // Direct navigation to home page instead of authentication
+    router.push('/home');
   };
 
   // Create floating coins
@@ -78,10 +92,11 @@ export default function Home() {
         <ThreeSceneWithNoSSR />
       </div>
 
-      <Navbar />
+      <NavbarWithAuth onLoginClick={handleAuth} onSignupClick={handleAuth} />
       
       <section className={styles.hero}>
         <div className={styles.heroContent}>
+          
           <h1>Smart Waste Management</h1>
           <p>Making our cities cleaner through smart technology and community participation</p>
           <div className={styles.ctaButtons}>
