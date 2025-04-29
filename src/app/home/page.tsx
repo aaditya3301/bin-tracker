@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Search, User, MapPin, Plus, Leaf, ArrowRight } from "lucide-react"
-import { useSession } from "next-auth/react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import dynamic from 'next/dynamic'
@@ -24,36 +23,20 @@ const NearbyBinsMap = dynamic(
 );
 
 export default function HomePage() {
-  const { data: session, status } = useSession()
   const router = useRouter()
+  // Mock session data for UI elements that need it
+  const session = {
+    user: {
+      name: "User",
+      image: null
+    }
+  }
+  
   const [stats, setStats] = useState({
     binsReported: 0,
     rewardsEarned: 0,
     tasksCompleted: 0,
   })
-
-  // Redirect if not authenticated - with improved logging and conditional handling
-  useEffect(() => {
-    console.log("Auth status:", status, "Session:", session);
-    
-    // Only redirect if explicitly unauthenticated
-    if (status === "unauthenticated") {
-      console.log("User is unauthenticated, redirecting to login");
-      router.push("/")
-    }
-  }, [status, router, session])
-
-  // Loading state
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-[#edf7f2] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-[#edf7f2]">
@@ -334,7 +317,7 @@ export default function HomePage() {
                     </svg>
                   </a>
                   <a href="#" className="bg-green-600 text-white p-2 rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
                     </svg>
                   </a>
