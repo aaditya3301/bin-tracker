@@ -25,7 +25,7 @@ export default function RewardsPage() {
   const [redeemLoading, setRedeemLoading] = useState(false);
   
   // Contract connection
-  const [contract, setContract] = useState(null);
+  const [contract, setContract] = useState<ethers.Contract | null>(null);
 
   // Initialize contract connection
   useEffect(() => {
@@ -57,7 +57,7 @@ export default function RewardsPage() {
   }, [address, isConnected]);
   
   // Load user data from contract
-  const loadUserData = async (contractInstance) => {
+  const loadUserData = async (contractInstance: ethers.Contract) => {
     if (!contractInstance || !address) return;
     
     setLoading(true);

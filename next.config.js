@@ -4,10 +4,10 @@ const nextConfig = {
   swcMinify: true,
   images: {
     domains: [
-      'lh3.googleusercontent.com', // For Google OAuth profile images
-      'gateway.pinata.cloud',       // For Pinata IPFS gateway
-      'cloudflare-ipfs.com',        // Cloudflare IPFS gateway
-      'ipfs.io',                    // Public IPFS gateway
+      'lh3.googleusercontent.com',
+      'gateway.pinata.cloud',
+      'cloudflare-ipfs.com',
+      'ipfs.io',
     ],
     remotePatterns: [],
     dangerouslyAllowSVG: true,
@@ -15,26 +15,28 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   webpack: (config, { isServer }) => {
-    // Avoid processing onnxruntime-web on the server
-    if (isServer) {
-      config.externals = [...(config.externals || []), 'onnxruntime-web'];
-    }
-    
-    // Add external onnxruntime-web and web3 fallbacks
+    // Apply these polyfills for client-side only
     if (!isServer) {
       config.resolve.fallback = {
-        ...(config.resolve.fallback || {}),
+        ...config.resolve.fallback,
         fs: false,
-        path: false,
-        crypto: false,
         net: false,
         tls: false,
+        crypto: require.resolve('crypto-browserify'),
+        stream: require.resolve('stream-browserify'),
+        url: require.resolve('url'),
+        zlib: require.resolve('browserify-zlib'),
+        http: require.resolve('stream-http'),
+        https: require.resolve('https-browserify'),
+        assert: require.resolve('assert'),
+        os: require.resolve('os-browserify'),
+        path: require.resolve('path-browserify'),
+        'pino-pretty': false,
+        encoding: false,
       };
     }
-    
     return config;
   },
-  // Remove any invalid experimental options
   experimental: {
     serverComponentsExternalPackages: [],
   }

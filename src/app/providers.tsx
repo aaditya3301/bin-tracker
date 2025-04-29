@@ -2,7 +2,7 @@
 
 import { getDefaultWallets, RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createConfig, WagmiConfig } from 'wagmi';
+import { createConfig, WagmiProvider } from 'wagmi';
 import { sepolia } from 'wagmi/chains';
 import { http } from 'wagmi';
 import '@rainbow-me/rainbowkit/styles.css';
@@ -14,11 +14,10 @@ const projectId = 'YOUR_ACTUAL_PROJECT_ID'; // Get a projectId from https://clou
 const { connectors } = getDefaultWallets({
   appName: 'BinTrack',
   projectId,
-  chains
 });
 
 const wagmiConfig = createConfig({
-  chains,
+  chains: chains as [typeof sepolia],
   connectors,
   transports: {
     [sepolia.id]: http(),
@@ -30,12 +29,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
   
   return (
-    <WagmiConfig config={wagmiConfig}>
+    <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider chains={chains}>
+        <RainbowKitProvider>
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>
-    </WagmiConfig>
+    </WagmiProvider>
   );
 }
