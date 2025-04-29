@@ -1,0 +1,15 @@
+{
+  "contract": "BinTrackRewards",
+  "address": "0xb46030B1d7eD97649F86F3414FD8887c0245dB8f",
+  "network": "sepolia",
+  "deployer": "0x14E5064cC4D23DC51F4Ba3739F71510c5D12995f",
+  "timestamp": "2025-04-29T21:53:01.060Z",
+  "coupons": {
+    "zomato": "ipfs://QmRYJ2v7KtCfx4PCMaKNjib5NeHUtqw5XYZUWsBUGZrfxw",
+    "myntra": "ipfs://QmPs1sN5AaGLsuxSU6HPFbUGDb4DZMiZyBQJzXhcYc5xTE"
+  },
+  "badges": {
+    "binHunter": "ipfs://QmTHmYYDtSBkoEW7nfwonk7yND7s3uxLqtczSHRZznMpxr",
+    "communityHero": "ipfs://QmXsv5EHsxuS2fQ8PcBsL63ZaqFZ1tpBC5zyoCcLABCDUP"
+  }
+}

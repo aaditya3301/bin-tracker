@@ -1,0 +1,29 @@
+{
+  "name": "Myntra 10% Discount Coupon",
+  "description": "This exclusive BinTrack NFT coupon gives you 10% off on your next Myntra purchase. Earned by contributing to cleaner communities through bin tracking.",
+  "image": "ipfs://QmashT39Bxb6MoCCyZQXq4vu8U2ojNd3Yw12YaEza67y1i",
+  "external_url": "https://bintrack.app/rewards",
+  "attributes": [
+    {
+      "trait_type": "Reward Type",
+      "value": "Coupon"
+    },
+    {
+      "trait_type": "Partner",
+      "value": "Myntra"
+    },
+    {
+      "trait_type": "Discount",
+      "value": "10%"
+    },
+    {
+      "trait_type": "Bins Required",
+      "value": "5"
+    },
+    {
+      "display_type": "date",
+      "trait_type": "Expiration Date",
+      "value": 1767225600
+    }
+  ]
+}

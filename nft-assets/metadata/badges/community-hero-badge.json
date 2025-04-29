@@ -1,0 +1,32 @@
+{
+  "name": "Community Hero Badge",
+  "description": "This prestigious BinTrack badge celebrates your exceptional dedication to waste management in your community. As a Community Hero, you've made a significant positive impact on local cleanliness and sustainability.",
+  "image": "ipfs://QmZmEK3bz5NwkynG6A75wNBcYZRQV6oD3vgas7c6WHTMsp",
+  "external_url": "https://bintrack.app/rewards",
+  "attributes": [
+    {
+      "trait_type": "Reward Type",
+      "value": "Badge"
+    },
+    {
+      "trait_type": "Badge Name",
+      "value": "Community Hero"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Legendary"
+    },
+    {
+      "trait_type": "Bins Required",
+      "value": "15"
+    },
+    {
+      "trait_type": "Achievement",
+      "value": "Located 15 waste bins"
+    },
+    {
+      "trait_type": "Rank",
+      "value": "Gold"
+    }
+  ]
+}
