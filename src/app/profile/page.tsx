@@ -4,7 +4,6 @@ import { NextPage } from 'next';
 import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 interface UserData {
@@ -23,7 +22,17 @@ interface UserData {
 }
 
 const ProfilePage: NextPage = () => {
-  const { data: session, status } = useSession();
+  // Remove: const { data: session, status } = useSession();
+  
+  // Create mock session data instead
+  const session = {
+    user: {
+      name: "John Doe",
+      email: "johndoe@example.com",
+      image: null
+    }
+  };
+  
   const router = useRouter();
   const [userData, setUserData] = useState<UserData>({
     firstName: '',
@@ -41,13 +50,17 @@ const ProfilePage: NextPage = () => {
   });
 
   useEffect(() => {
-    // Redirect if not authenticated
-    if (status === 'unauthenticated') {
-      router.push('/home');
-    }
+    // Remove authentication redirect
+    // if (status === 'unauthenticated') {
+    //   router.push('/home');
+    // }
 
     // Fetch user data from API or use session data
-    if (status === 'authenticated' && session?.user) {
+    // Replace with direct setting of data
+    // if (status === 'authenticated' && session?.user) {
+    
+    // Just use the mock session data we created
+    if (session?.user) {
       const nameParts = session.user.name?.split(' ') || ['', ''];
       
       // In a real app, you would fetch the complete user profile from your API
@@ -67,11 +80,12 @@ const ProfilePage: NextPage = () => {
         badge: 'Community Hero',
       });
     }
-  }, [status, session, router]);
+  }, [session]); // Changed dependency from [status, session, router] to just [session]
 
-  if (status === 'loading') {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
-  }
+  // Remove loading state check
+  // if (status === 'loading') {
+  //   return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  // }
 
   return (
     <>
