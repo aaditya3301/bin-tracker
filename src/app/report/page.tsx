@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useRef, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -23,7 +22,15 @@ const MapWithNoSSR = dynamic(
 );
 
 export default function BinReportPage() {
-  const { data: session, status } = useSession()
+  // Remove session: const { data: session, status } = useSession()
+  // Add mock session for UI elements if needed
+  const session = {
+    user: {
+      name: "User",
+      image: null
+    }
+  }
+  
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formStep, setFormStep] = useState(1)
@@ -189,25 +196,24 @@ export default function BinReportPage() {
     }
   }
   
-  // Redirect if not authenticated - add a status check
-  useEffect(() => {
-    // Only redirect if explicitly unauthenticated (not during loading)
-    if (status === "unauthenticated") {
-      router.push('/')
-    }
-  }, [status, router])
+  // REMOVE AUTHENTICATION CHECK
+  // useEffect(() => {
+  //   if (status === "unauthenticated") {
+  //     router.push('/')
+  //   }
+  // }, [status, router])
 
-  // Replace your existing check with this more robust version
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-[#edf7f2] p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
+  // REMOVE LOADING STATE CHECK
+  // if (status === "loading") {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-b from-white to-[#edf7f2] p-6 flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-600 mx-auto mb-4"></div>
+  //         <p className="text-gray-600">Loading...</p>
+  //       </div>
+  //     </div>
+  //   )
+  // }
   
   if (success) {
     return (

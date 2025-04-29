@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useRef, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Search, ArrowLeft, Loader2, MapPin, Filter, X } from 'lucide-react'
 import dynamic from 'next/dynamic'
@@ -27,20 +26,21 @@ const FullScreenMap = dynamic(
 );
 
 export default function MapPage() {
-  const { data: session, status } = useSession()
+  // Remove: const { data: session, status } = useSession()
+  // Add mock session for UI elements if needed
+  const session = {
+    user: {
+      name: "User",
+      image: null
+    }
+  }
+  
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const [searchLocation, setSearchLocation] = useState<{lat: number, lng: number} | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/")
-    }
-  }, [status, router])
 
   // Handle search submit
   const handleSearch = async (e: React.FormEvent) => {
@@ -79,14 +79,6 @@ export default function MapPage() {
     if (searchInputRef.current) {
       searchInputRef.current.focus()
     }
-  }
-
-  if (status === "loading") {
-    return (
-      <div className="h-screen w-full flex items-center justify-center">
-        <Loader2 className="h-10 w-10 text-green-600 animate-spin" />
-      </div>
-    )
   }
 
   return (
@@ -156,9 +148,6 @@ export default function MapPage() {
               </div>
             )}
           </div>
-
-         
-        
 
           {/* Map Container - Now with fixed height */}
           <div className="h-[400px] rounded-lg overflow-hidden shadow-lg">
