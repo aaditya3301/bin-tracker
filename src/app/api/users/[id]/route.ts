@@ -2,17 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
-import { authOptions } from '@/lib/auth/options'; // You'll need to create this
+import { authOptions } from '@/lib/auth/options'; // Fixed import path
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Use the authOptions from a centralized location
     const session = await getServerSession(authOptions);
     
-    // Check if the user is authenticated
     if (!session || !session.user) {
       return NextResponse.json(
         { error: 'You must be signed in to access this endpoint' },
@@ -20,8 +18,10 @@ export async function GET(
       );
     }
     
-    // Check if the user is requesting their own profile
-    if (session.user.id !== params.id) {
+    // For JWT strategy, we need to handle user ID differently
+    const userId = session.user.id || session.user.email; // Fallback to email if id not available
+    
+    if (userId !== params.id && session.user.email !== params.id) {
       return NextResponse.json(
         { error: 'You can only access your own profile' },
         { status: 403 }
@@ -31,10 +31,18 @@ export async function GET(
     const client = await clientPromise;
     const db = client.db();
     
-    // Get user from the database
-    const user = await db.collection('users').findOne({
-      _id: new ObjectId(params.id),
-    });
+    // Try to find user by ID first, then by email
+    let user;
+    try {
+      user = await db.collection('users').findOne({
+        _id: new ObjectId(params.id),
+      });
+    } catch {
+      // If ID is not a valid ObjectId, try finding by email
+      user = await db.collection('users').findOne({
+        email: params.id,
+      });
+    }
     
     if (!user) {
       return NextResponse.json(
@@ -43,7 +51,6 @@ export async function GET(
       );
     }
     
-    // Return user data, removing sensitive information
     return NextResponse.json({
       id: user._id,
       firstName: user.firstName || '',
@@ -73,10 +80,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Use the authOptions from a centralized location
     const session = await getServerSession(authOptions);
     
-    // Check if the user is authenticated
     if (!session || !session.user) {
       return NextResponse.json(
         { error: 'You must be signed in to access this endpoint' },
@@ -84,19 +89,17 @@ export async function PATCH(
       );
     }
     
-    // Check if the user is updating their own profile
-    if (session.user.id !== params.id) {
+    const userId = session.user.id || session.user.email;
+    
+    if (userId !== params.id && session.user.email !== params.id) {
       return NextResponse.json(
         { error: 'You can only update your own profile' },
         { status: 403 }
       );
     }
     
-    // Get the updated data from the request
     const data = await request.json();
     
-    // Validate the data
-    // (Add more validation as needed)
     const validFields = [
       'firstName',
       'lastName',
@@ -106,7 +109,7 @@ export async function PATCH(
       'occupation',
     ];
     
-    const updateData = {};
+    const updateData: any = {};
     for (const field of validFields) {
       if (data[field] !== undefined) {
         updateData[field] = data[field];
@@ -116,17 +119,26 @@ export async function PATCH(
     const client = await clientPromise;
     const db = client.db();
     
-    // Update user in the database
-    const result = await db.collection('users').updateOne(
-      { _id: new ObjectId(params.id) },
-      { $set: updateData }
-    );
+    // Try to update by ObjectId first, then by email
+    let result;
+    try {
+      result = await db.collection('users').updateOne(
+        { _id: new ObjectId(params.id) },
+        { $set: { ...updateData, updatedAt: new Date() } }
+      );
+    } catch {
+      result = await db.collection('users').updateOne(
+        { email: params.id },
+        { $set: { ...updateData, updatedAt: new Date() } }
+      );
+    }
     
     if (result.matchedCount === 0) {
       // Create a new user profile if it doesn't exist
       await db.collection('users').insertOne({
-        _id: new ObjectId(params.id),
         email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
         ...updateData,
         binsReported: 0,
         binsUtilized: 0,

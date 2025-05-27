@@ -1,8 +1,14 @@
+'use client'
+
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Leaf } from 'lucide-react'
+import { Leaf, Search, User } from 'lucide-react'
+import { useAuth } from '@/lib/auth'
+import UserMenu from './UserMenu'
 
 export function Header() {
+  const { session, isAuthenticated } = useAuth()
+
   return (
     <header className="bg-white shadow-sm py-4">
       <div className="container mx-auto px-4 md:px-6">
@@ -40,8 +46,28 @@ export function Header() {
             <Link href="/community" className="text-gray-800 hover:text-[#4CAF50] transition-colors">
               Community
             </Link>
-           
           </motion.nav>
+
+          <motion.div
+            className="flex items-center space-x-4"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Search className="h-5 w-5 text-gray-600" />
+            </button>
+            
+            {isAuthenticated ? (
+              <UserMenu />
+            ) : (
+              <Link href="/auth/signin">
+                <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105">
+                  Login/Sign Up
+                </button>
+              </Link>
+            )}
+          </motion.div>
         </div>
       </div>
     </header>

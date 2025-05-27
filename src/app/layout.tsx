@@ -1,25 +1,26 @@
-import "./globals.css"
-import SessionProvider from "@/components/SessionProvider"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "./api/auth/[...nextauth]/route"
-import { Providers } from './providers'
+import './globals.css'
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import Providers from './providers'
 
-export const metadata = {
-  title: "BinTrack - Smart Waste Management",
-  description: "Track bins, earn rewards, make a difference",
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata: Metadata = {
+  title: 'BinTracker - Smart Waste Management',
+  description: 'AI-powered waste management and community reporting platform',
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const session = await getServerSession(authOptions)
-  
   return (
     <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
+      <body className={inter.className}>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   )

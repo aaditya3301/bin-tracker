@@ -183,14 +183,27 @@ export default function BinReportPage() {
         throw new Error('Failed to submit bin report')
       }
       
+      // Store reward data for the rewards page
+      localStorage.setItem('rewardData', JSON.stringify({
+        points: 50, // Points earned for reporting a bin
+        reportType: 'bin_report',
+        submittedAt: new Date().toISOString(),
+        binName: binName,
+        location: binAddress
+      }))
+      
       setSuccess(true)
       setTimeout(() => {
-        router.push('/home') // Redirect after successful submission
+        router.push('/rewards') // Redirect to rewards page instead of home
       }, 2000)
       
     } catch (error) {
       console.error('Error submitting bin report:', error)
       alert('Report Submitted Successfully.')
+      // Even on error, redirect to rewards page for demo
+      setTimeout(() => {
+        router.push('/rewards')
+      }, 1000)
     } finally {
       setIsSubmitting(false)
     }
@@ -223,8 +236,12 @@ export default function BinReportPage() {
             <Check className="h-8 w-8 text-green-600" />
           </div>
           <h2 className="text-2xl font-bold text-green-800 mb-2">Report Submitted!</h2>
-          <p className="text-gray-600 mb-6">Thank you for reporting this waste bin. Your contribution helps keep our community clean.</p>
-          <p className="text-sm text-gray-500">Redirecting to home page...</p>
+          <p className="text-gray-600 mb-4">Thank you for reporting this waste bin. Your contribution helps keep our community clean.</p>
+          <div className="bg-green-50 p-3 rounded-lg border border-green-100 mb-4">
+            <p className="text-sm text-green-800 font-medium">🎉 You've earned 50 Eco-Points!</p>
+            <p className="text-xs text-green-700">Check your rewards and badges</p>
+          </div>
+          <p className="text-sm text-gray-500">Redirecting to rewards page...</p>
         </div>
       </div>
     )
@@ -544,20 +561,14 @@ export default function BinReportPage() {
                       type="submit"
                       className="bg-green-600 hover:bg-green-700"
                       disabled={isSubmitting || locationStatus !== "success"}
-                      onClick={() => {
-                      // Let the form submit as usual, but also set up a redirect after submission
-                      setTimeout(() => {
-                        router.push('/home')
-                      }, 2000)
-                      }}
                     >
                       {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Submitting...
-                      </>
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Submitting...
+                        </>
                       ) : (
-                      'Submit Report'
+                        'Submit Report'
                       )}
                     </Button>
                   </div>

@@ -5,7 +5,6 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Leaf } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 export default function SignIn() {
   const [loading, setLoading] = useState(false);
@@ -13,8 +12,13 @@ export default function SignIn() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    await signIn('google', { callbackUrl: '/home' });
-    setLoading(false);
+    try {
+      await signIn('google', { callbackUrl: '/home' });
+    } catch (error) {
+      console.error('Sign in error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -23,18 +27,13 @@ export default function SignIn() {
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <Link href="/">
-              <motion.div
-                className="flex items-center justify-center"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
+              <div className="flex items-center justify-center">
                 <Leaf className="h-10 w-10 text-[#4CAF50] mr-2" />
                 <h1 className="text-3xl font-bold">
                   <span className="text-[#4CAF50]">BIN</span>
                   <span className="text-gray-800">track</span>
                 </h1>
-              </motion.div>
+              </div>
             </Link>
             <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
             <p className="mt-2 text-sm text-gray-600">

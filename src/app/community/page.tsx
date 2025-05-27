@@ -59,7 +59,7 @@ export default function CommunityPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
 
-  const handleCreatePost = (newPost) => {
+  const handleCreatePost = (newPost: { content: string; imageUrl?: string }) => {
     // In a real app, you would send this to your API
     const post = {
       id: `post-${Date.now()}`,
@@ -71,20 +71,21 @@ export default function CommunityPage() {
       createdAt: new Date().toISOString(),
       likes: 0,
       comments: [],
-      ...newPost
+      content: newPost.content,
+      imageUrl: newPost.imageUrl || ''
     };
     
     setPosts([post, ...posts]);
     setIsModalOpen(false);
   };
 
-  const handleLike = (postId) => {
+  const handleLike = (postId: string) => {
     setPosts(posts.map(post => 
       post.id === postId ? { ...post, likes: post.likes + 1 } : post
     ));
   };
 
-  const handleAddComment = (postId, comment) => {
+  const handleAddComment = (postId: string, comment: string) => {
     setPosts(posts.map(post => {
       if (post.id === postId) {
         const newComment = {

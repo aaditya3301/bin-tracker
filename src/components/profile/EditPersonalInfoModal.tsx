@@ -8,14 +8,14 @@ interface EditPersonalInfoModalProps {
     lastName: string;
     email: string;
     phone: string;
-    postalCode: string;
+    // postalCode: string;
   };
   onClose: () => void;
   onSave: (data: {
     firstName: string;
     lastName: string;
     phone: string;
-    postalCode: string;
+    // postalCode: string;
   }) => void;
 }
 
@@ -27,7 +27,7 @@ export default function EditPersonalInfoModal({
   const [firstName, setFirstName] = useState(userData.firstName || '');
   const [lastName, setLastName] = useState(userData.lastName || '');
   const [phone, setPhone] = useState(userData.phone || '');
-  const [postalCode, setPostalCode] = useState(userData.postalCode || '');
+  // const [postalCode, setPostalCode] = useState(userData.postalCode || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,7 +39,7 @@ export default function EditPersonalInfoModal({
         firstName,
         lastName,
         phone,
-        postalCode,
+        // postalCode,
       });
     } catch (error) {
       console.error('Error saving personal info:', error);
@@ -124,7 +124,7 @@ export default function EditPersonalInfoModal({
             />
           </div>
           
-          <div className="mb-6">
+          {/* <div className="mb-6">
             <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
               Postal Code
             </label>
@@ -136,7 +136,7 @@ export default function EditPersonalInfoModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
               placeholder="Your postal/zip code"
             />
-          </div>
+          </div> */}
           
           <div className="flex justify-end space-x-3">
             <button

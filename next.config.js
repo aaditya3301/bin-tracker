@@ -8,6 +8,7 @@ const nextConfig = {
       'gateway.pinata.cloud',
       'cloudflare-ipfs.com',
       'ipfs.io',
+      'cdn.jsdelivr.net'
     ],
     remotePatterns: [],
     dangerouslyAllowSVG: true,
@@ -15,31 +16,46 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   webpack: (config, { isServer }) => {
-    // Apply these polyfills for client-side only
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
         net: false,
         tls: false,
-        crypto: require.resolve('crypto-browserify'),
-        stream: require.resolve('stream-browserify'),
-        url: require.resolve('url'),
-        zlib: require.resolve('browserify-zlib'),
-        http: require.resolve('stream-http'),
-        https: require.resolve('https-browserify'),
-        assert: require.resolve('assert'),
-        os: require.resolve('os-browserify'),
-        path: require.resolve('path-browserify'),
-        'pino-pretty': false,
-        encoding: false,
+        crypto: false,
+        stream: false,
+        url: false,
+        zlib: false,
+        http: false,
+        https: false,
+        assert: false,
+        os: false,
+        path: false,
       };
+
+      // Suppress specific warnings
+      config.ignoreWarnings = [
+        /Critical dependency: require function is used in a way in which dependencies cannot be statically extracted/,
+        { module: /onnxruntime-web/ },
+      ];
     }
+
     return config;
   },
-  experimental: {
-    serverComponentsExternalPackages: [],
-  }
+  // Add CSP headers for external scripts
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; object-src 'none';",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

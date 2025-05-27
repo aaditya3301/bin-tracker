@@ -45,7 +45,7 @@ export default function PostCard({ post, onLike, onAddComment }: PostCardProps) 
     }
   };
 
-  const handleSubmitComment = (e) => {
+  const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (newComment.trim()) {
       onAddComment(post.id, newComment);

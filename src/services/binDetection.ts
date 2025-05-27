@@ -1,264 +1,169 @@
-// Single class for trash bins
-const CLASS_NAME = 'trash-bins';
+// PURE YOLO11 API CLIENT - NO MOCK DATA
 
-interface DetectionResult {
+export interface DetectionResult {
   label: string;
   confidence: number;
   bbox: [number, number, number, number]; // [x, y, width, height]
+  class_id: number;
 }
 
-let ortModule: any = null;
-
-// Load ONNX Runtime only on client side
-const loadOrtModule = async () => {
-  if (typeof window === 'undefined') {
-    return null; // Skip on server side
-  }
-  
-  if (ortModule) {
-    return ortModule; // Return cached module if already loaded
-  }
-
-  try {
-    // Dynamic import only runs on client side
-    const ort = await import('onnxruntime-web');
-    
-    // Configure WASM paths
-    ort.env.wasm.wasmPaths = {
-      'ort-wasm.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm.wasm',
-      'ort-wasm-simd.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm-simd.wasm',
-      'ort-wasm-threaded.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm-threaded.wasm',
-      'ort-wasm-simd-threaded.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort-wasm-simd-threaded.wasm',
-    } as Record<string, string>;
-    
-    ortModule = ort;
-    return ort;
-  } catch (error) {
-    console.error("Failed to load ONNX Runtime:", error);
-    return null;
-  }
-};
-
-// Process YOLOv12 results
-function processYolo12Results(output: any, imageWidth: number, imageHeight: number): DetectionResult[] {
-  const data = output.data;
-  const dims = output.dims;
-  
-  console.log("Output dimensions:", dims.join(','));
-  console.log("First 10 values:", data.slice(0, 10));
-  
-  if (dims.length !== 3 || dims[0] !== 1) {
-    console.error("Unexpected output dimensions:", dims);
-    return [];
-  }
-
-  const numDetections = dims[2];
-  const numAttributes = dims[1];
-  
-  console.log(`Parsing as YOLOv12 output: ${numDetections} candidate boxes`);
-  
-  const detections: DetectionResult[] = [];
-  const confidenceThreshold = 0.6; // Keep this threshold
-  
-  for (let i = 0; i < numDetections; i++) {
-    const x_center = data[i];
-    const y_center = data[i + numDetections];
-    const width = data[i + 2 * numDetections];
-    const height = data[i + 3 * numDetections];
-    const confidence = data[i + 4 * numDetections];
-    
-    if (confidence > confidenceThreshold) {
-      const inputSize = 640;
-      const scaleX = imageWidth / inputSize;
-      const scaleY = imageHeight / inputSize;
-      
-      const x = (x_center - width / 2) * scaleX;
-      const y = (y_center - height / 2) * scaleY;
-      const w = width * scaleX;
-      const h = height * scaleY;
-      
-      // RELAXED filtering for bins - bins can be various shapes and sizes
-      const aspectRatio = h / w;
-      const area = w * h;
-      const imageArea = imageWidth * imageHeight;
-      const relativeArea = area / imageArea;
-      
-      // Much more lenient filters
-      const isReasonableShape = aspectRatio > 0.4 && aspectRatio < 4.0; // Very wide range
-      const isReasonableSize = relativeArea > 0.005 && relativeArea < 0.95; // 0.5% to 95% of image
-      
-      if (isReasonableShape && isReasonableSize) {
-        const clampedX = Math.max(0, Math.min(x, imageWidth));
-        const clampedY = Math.max(0, Math.min(y, imageHeight));
-        const clampedW = Math.min(w, imageWidth - clampedX);
-        const clampedH = Math.min(h, imageHeight - clampedY);
-        
-        if (clampedW > 0 && clampedH > 0) {
-          console.log(`Detection #${detections.length + 1}: conf=${confidence.toFixed(2)}, box=[${clampedX.toFixed(0)},${clampedY.toFixed(0)},${clampedW.toFixed(0)},${clampedH.toFixed(0)}], AR=${aspectRatio.toFixed(2)}`);
-          
-          detections.push({
-            label: CLASS_NAME,
-            confidence: confidence,
-            bbox: [clampedX, clampedY, clampedW, clampedH]
-          });
-        }
-      } else {
-        console.log(`Filtered out detection: conf=${confidence.toFixed(2)}, AR=${aspectRatio.toFixed(2)}, size=${relativeArea.toFixed(4)} (shape: ${isReasonableShape}, size: ${isReasonableSize})`);
-      }
-    }
-  }
-  
-  // Sort by confidence and apply NMS
-  detections.sort((a, b) => b.confidence - a.confidence);
-  const filteredDetections = applyNMS(detections, 0.4);
-  
-  console.log(`Found ${filteredDetections.length} detections above threshold`);
-  
-  return filteredDetections;
-}
-
-// Non-Maximum Suppression to remove overlapping detections
-function applyNMS(detections: DetectionResult[], iouThreshold: number): DetectionResult[] {
-  if (detections.length === 0) return [];
-  
-  const result: DetectionResult[] = [];
-  const suppressed = new Set<number>();
-  
-  for (let i = 0; i < detections.length; i++) {
-    if (suppressed.has(i)) continue;
-    
-    result.push(detections[i]);
-    
-    for (let j = i + 1; j < detections.length; j++) {
-      if (suppressed.has(j)) continue;
-      
-      const iou = calculateIoU(detections[i].bbox, detections[j].bbox);
-      if (iou > iouThreshold) {
-        suppressed.add(j);
-      }
-    }
-  }
-  
-  return result;
-}
-
-// Calculate Intersection over Union
-function calculateIoU(bbox1: [number, number, number, number], bbox2: [number, number, number, number]): number {
-  const [x1, y1, w1, h1] = bbox1;
-  const [x2, y2, w2, h2] = bbox2;
-  
-  const x1_max = x1 + w1;
-  const y1_max = y1 + h1;
-  const x2_max = x2 + w2;
-  const y2_max = y2 + h2;
-  
-  const intersectX1 = Math.max(x1, x2);
-  const intersectY1 = Math.max(y1, y2);
-  const intersectX2 = Math.min(x1_max, x2_max);
-  const intersectY2 = Math.min(y1_max, y2_max);
-  
-  const intersectWidth = Math.max(0, intersectX2 - intersectX1);
-  const intersectHeight = Math.max(0, intersectY2 - intersectY1);
-  const intersectArea = intersectWidth * intersectHeight;
-  
-  const area1 = w1 * h1;
-  const area2 = w2 * h2;
-  const unionArea = area1 + area2 - intersectArea;
-  
-  return unionArea > 0 ? intersectArea / unionArea : 0;
-}
-
-// Update the main detection function threshold too
-export async function detectBin(imageElement: HTMLImageElement): Promise<{
+interface BinDetectionResponse {
+  success: boolean;
   isBin: boolean;
-  detections: DetectionResult[];
-  highestConfidence: number;
-}> {
+  lowestConfidence: number;
+  message: string;
+  totalDetections: number;
+  error?: string;
+  
+  // Legacy compatibility fields
+  highestConfidence?: number;
+  detections?: any[];
+}
+
+// API Configuration - UPDATED FOR RENDER
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://your-render-app-name.onrender.com';
+
+// Health check function
+export async function checkAPIHealth(): Promise<boolean> {
   try {
-    console.log("Starting bin detection...");
+    console.log('🔍 Checking API health...');
     
-    // Load ONNX Runtime first
-    const ort = await loadOrtModule();
-    if (!ort) {
-      throw new Error("Failed to load ONNX Runtime");
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased timeout for Render
+    
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data = await response.json();
+      const isHealthy = data.status === 'healthy' && data.model_loaded;
+      console.log(isHealthy ? '✅ API is healthy' : '⚠️ API unhealthy');
+      return isHealthy;
     }
     
-    const modelPath = '/models/hi.onnx';
-    console.log(`Loading model from: ${modelPath}`);
+    console.log('❌ API health check failed');
+    return false;
+  } catch (error) {
+    console.log('❌ API health check error:', error);
+    return false;
+  }
+}
+
+// Main detection function
+export async function detectBin(
+  imageElement: HTMLImageElement,
+  confidenceThreshold: number = 0.5
+): Promise<BinDetectionResponse> {
+  
+  console.log(`🚀 Starting detection via Render API (threshold: ${confidenceThreshold})`);
+  
+  try {
+    // Check if running in browser
+    if (typeof window === 'undefined') {
+      throw new Error('Detection only available in browser environment');
+    }
     
-    // Load the model
-    const session = await ort.InferenceSession.create(modelPath);
-    console.log("Model loaded successfully");
+    // Convert image to base64
+    const canvas = document.createElement('canvas');
+    canvas.width = imageElement.naturalWidth || imageElement.width;
+    canvas.height = imageElement.naturalHeight || imageElement.height;
     
-    // Get input names
-    const inputNames = session.inputNames;
-    console.log("Model expects these input names:", inputNames);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Cannot get canvas context');
+    }
     
-    // Preprocess image
-    const inputTensor = preprocessImage(imageElement, ort);
-    console.log("Image preprocessed");
+    // Draw image and get base64 data
+    ctx.drawImage(imageElement, 0, 0);
+    const imageBase64 = canvas.toDataURL('image/jpeg', 0.85);
     
-    // Run inference
-    const inputName = inputNames[0];
-    console.log(`Running inference with input name '${inputName}'...`);
-    const results = await session.run({ [inputName]: inputTensor });
-    console.log("Inference completed");
-    console.log("Output keys:", Object.keys(results));
+    console.log('📤 Sending image to Render API...');
     
-    // Process results
-    const output = results[Object.keys(results)[0]];
-    const detections = processYolo12Results(output, imageElement.width, imageElement.height);
-    console.log("Detections:", detections);
+    // Call detection API with longer timeout for Render
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 seconds for Render cold starts
     
-    // Find highest confidence
-    const highestConfidence = detections.length > 0 
-      ? Math.max(...detections.map(d => d.confidence))
-      : 0;
+    const response = await fetch(`${API_BASE_URL}/detect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image: imageBase64,
+        threshold: 0.3
+      }),
+      signal: controller.signal
+    });
     
-    const isBin = detections.length > 0 && highestConfidence > 0.6; // Lower to 60%
+    clearTimeout(timeoutId);
     
-    console.log(`Bin detected: ${isBin}, Confidence: ${highestConfidence}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.status} ${response.statusText}`);
+    }
     
-    return {
-      isBin,
-      detections,
-      highestConfidence
+    const result = await response.json();
+    
+    // Transform response to match expected format
+    const transformedResult: BinDetectionResponse = {
+      success: result.success || false,
+      isBin: result.isBin || false,
+      lowestConfidence: result.lowestConfidence || 0,
+      message: result.message?.replace(/lowest /gi, '') || 'Detection completed', // Remove "lowest" word
+      totalDetections: result.totalDetections || 0,
+      error: result.error,
+      
+      // Legacy compatibility
+      highestConfidence: result.lowestConfidence || 0,
+      detections: []
     };
     
+    console.log(`✅ Detection complete via Render:`, {
+      success: transformedResult.success,
+      isBin: transformedResult.isBin,
+      detections: transformedResult.totalDetections,
+      confidence: `${(transformedResult.lowestConfidence * 100).toFixed(1)}%`,
+      canProceed: transformedResult.isBin ? 'YES (≥75%)' : 'NO (<75%)'
+    });
+    
+    return transformedResult;
+    
   } catch (error) {
-    console.error("Detection error:", error);
-    throw error;
+    console.error('❌ Render API detection failed:', error);
+    
+    // Check if it's a network error
+    let errorMessage = 'Unknown error';
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        errorMessage = 'Detection timeout - Render may be warming up, please try again';
+      } else if (error.message.includes('fetch')) {
+        errorMessage = 'Cannot connect to Render API - check if service is running';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
+    // Return error response in expected format
+    return {
+      success: false,
+      isBin: false,
+      lowestConfidence: 0,
+      message: `Detection failed: ${errorMessage}`,
+      totalDetections: 0,
+      error: errorMessage,
+      
+      // Legacy compatibility
+      highestConfidence: 0,
+      detections: []
+    };
   }
 }
 
-// Preprocessing function for YOLOv12
-function preprocessImage(imageElement: HTMLImageElement, ort: any): any {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d')!;
-  
-  // YOLOv12 expects 640x640 input
-  const inputSize = 640;
-  canvas.width = inputSize;
-  canvas.height = inputSize;
-  
-  // Draw image scaled to fit canvas
-  ctx.drawImage(imageElement, 0, 0, inputSize, inputSize);
-  
-  // Get image data
-  const imageData = ctx.getImageData(0, 0, inputSize, inputSize);
-  const data = imageData.data;
-  
-  // Convert to RGB and normalize to [0, 1]
-  const inputArray = new Float32Array(3 * inputSize * inputSize);
-  
-  for (let i = 0; i < inputSize * inputSize; i++) {
-    const pixelIndex = i * 4;
-    // Normalize from [0, 255] to [0, 1]
-    inputArray[i] = data[pixelIndex] / 255.0;                    // R
-    inputArray[i + inputSize * inputSize] = data[pixelIndex + 1] / 255.0;     // G
-    inputArray[i + 2 * inputSize * inputSize] = data[pixelIndex + 2] / 255.0; // B
-  }
-  
-  // Create tensor [1, 3, 640, 640]
-  return new ort.Tensor('float32', inputArray, [1, 3, inputSize, inputSize]);
-}
+export type { BinDetectionResponse };

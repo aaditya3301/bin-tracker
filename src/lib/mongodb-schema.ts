@@ -1,4 +1,5 @@
 // This file is for reference only - it shows the MongoDB schema design
+import { ObjectId } from 'mongodb';
 
 /**
  * User Collection Schema
