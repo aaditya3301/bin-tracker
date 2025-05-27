@@ -39,6 +39,136 @@ const loadOrtModule = async () => {
   }
 };
 
+// Process YOLOv12 results
+function processYolo12Results(output: any, imageWidth: number, imageHeight: number): DetectionResult[] {
+  const data = output.data;
+  const dims = output.dims;
+  
+  console.log("Output dimensions:", dims.join(','));
+  console.log("First 10 values:", data.slice(0, 10));
+  
+  if (dims.length !== 3 || dims[0] !== 1) {
+    console.error("Unexpected output dimensions:", dims);
+    return [];
+  }
+
+  const numDetections = dims[2];
+  const numAttributes = dims[1];
+  
+  console.log(`Parsing as YOLOv12 output: ${numDetections} candidate boxes`);
+  
+  const detections: DetectionResult[] = [];
+  const confidenceThreshold = 0.6; // Keep this threshold
+  
+  for (let i = 0; i < numDetections; i++) {
+    const x_center = data[i];
+    const y_center = data[i + numDetections];
+    const width = data[i + 2 * numDetections];
+    const height = data[i + 3 * numDetections];
+    const confidence = data[i + 4 * numDetections];
+    
+    if (confidence > confidenceThreshold) {
+      const inputSize = 640;
+      const scaleX = imageWidth / inputSize;
+      const scaleY = imageHeight / inputSize;
+      
+      const x = (x_center - width / 2) * scaleX;
+      const y = (y_center - height / 2) * scaleY;
+      const w = width * scaleX;
+      const h = height * scaleY;
+      
+      // RELAXED filtering for bins - bins can be various shapes and sizes
+      const aspectRatio = h / w;
+      const area = w * h;
+      const imageArea = imageWidth * imageHeight;
+      const relativeArea = area / imageArea;
+      
+      // Much more lenient filters
+      const isReasonableShape = aspectRatio > 0.4 && aspectRatio < 4.0; // Very wide range
+      const isReasonableSize = relativeArea > 0.005 && relativeArea < 0.95; // 0.5% to 95% of image
+      
+      if (isReasonableShape && isReasonableSize) {
+        const clampedX = Math.max(0, Math.min(x, imageWidth));
+        const clampedY = Math.max(0, Math.min(y, imageHeight));
+        const clampedW = Math.min(w, imageWidth - clampedX);
+        const clampedH = Math.min(h, imageHeight - clampedY);
+        
+        if (clampedW > 0 && clampedH > 0) {
+          console.log(`Detection #${detections.length + 1}: conf=${confidence.toFixed(2)}, box=[${clampedX.toFixed(0)},${clampedY.toFixed(0)},${clampedW.toFixed(0)},${clampedH.toFixed(0)}], AR=${aspectRatio.toFixed(2)}`);
+          
+          detections.push({
+            label: CLASS_NAME,
+            confidence: confidence,
+            bbox: [clampedX, clampedY, clampedW, clampedH]
+          });
+        }
+      } else {
+        console.log(`Filtered out detection: conf=${confidence.toFixed(2)}, AR=${aspectRatio.toFixed(2)}, size=${relativeArea.toFixed(4)} (shape: ${isReasonableShape}, size: ${isReasonableSize})`);
+      }
+    }
+  }
+  
+  // Sort by confidence and apply NMS
+  detections.sort((a, b) => b.confidence - a.confidence);
+  const filteredDetections = applyNMS(detections, 0.4);
+  
+  console.log(`Found ${filteredDetections.length} detections above threshold`);
+  
+  return filteredDetections;
+}
+
+// Non-Maximum Suppression to remove overlapping detections
+function applyNMS(detections: DetectionResult[], iouThreshold: number): DetectionResult[] {
+  if (detections.length === 0) return [];
+  
+  const result: DetectionResult[] = [];
+  const suppressed = new Set<number>();
+  
+  for (let i = 0; i < detections.length; i++) {
+    if (suppressed.has(i)) continue;
+    
+    result.push(detections[i]);
+    
+    for (let j = i + 1; j < detections.length; j++) {
+      if (suppressed.has(j)) continue;
+      
+      const iou = calculateIoU(detections[i].bbox, detections[j].bbox);
+      if (iou > iouThreshold) {
+        suppressed.add(j);
+      }
+    }
+  }
+  
+  return result;
+}
+
+// Calculate Intersection over Union
+function calculateIoU(bbox1: [number, number, number, number], bbox2: [number, number, number, number]): number {
+  const [x1, y1, w1, h1] = bbox1;
+  const [x2, y2, w2, h2] = bbox2;
+  
+  const x1_max = x1 + w1;
+  const y1_max = y1 + h1;
+  const x2_max = x2 + w2;
+  const y2_max = y2 + h2;
+  
+  const intersectX1 = Math.max(x1, x2);
+  const intersectY1 = Math.max(y1, y2);
+  const intersectX2 = Math.min(x1_max, x2_max);
+  const intersectY2 = Math.min(y1_max, y2_max);
+  
+  const intersectWidth = Math.max(0, intersectX2 - intersectX1);
+  const intersectHeight = Math.max(0, intersectY2 - intersectY1);
+  const intersectArea = intersectWidth * intersectHeight;
+  
+  const area1 = w1 * h1;
+  const area2 = w2 * h2;
+  const unionArea = area1 + area2 - intersectArea;
+  
+  return unionArea > 0 ? intersectArea / unionArea : 0;
+}
+
+// Update the main detection function threshold too
 export async function detectBin(imageElement: HTMLImageElement): Promise<{
   isBin: boolean;
   detections: DetectionResult[];
@@ -56,174 +186,79 @@ export async function detectBin(imageElement: HTMLImageElement): Promise<{
     const modelPath = '/models/hi.onnx';
     console.log(`Loading model from: ${modelPath}`);
     
-    // Create a session just once
+    // Load the model
     const session = await ort.InferenceSession.create(modelPath);
     console.log("Model loaded successfully");
     
-    // Get input names from the model
-    const modelInputs = session.inputNames;
-    console.log("Model expects these input names:", modelInputs);
+    // Get input names
+    const inputNames = session.inputNames;
+    console.log("Model expects these input names:", inputNames);
     
-    const inputName = modelInputs[0]; // Use the first input name
-    
-    // Preprocess image for YOLOv11n - 640x640 is standard YOLOv11 input size
-    const tensor = await preprocessImage(imageElement, 640, 640, ort);
+    // Preprocess image
+    const inputTensor = preprocessImage(imageElement, ort);
     console.log("Image preprocessed");
     
-    // Run inference with the correct input name
-    const feeds: Record<string, any> = {};
-    feeds[inputName] = tensor;
+    // Run inference
+    const inputName = inputNames[0];
     console.log(`Running inference with input name '${inputName}'...`);
-    
-    const results = await session.run(feeds);
+    const results = await session.run({ [inputName]: inputTensor });
     console.log("Inference completed");
     console.log("Output keys:", Object.keys(results));
     
-    // Process YOLOv11n results
-    const detections = processYolo11Results(results, imageElement.width, imageElement.height);
+    // Process results
+    const output = results[Object.keys(results)[0]];
+    const detections = processYolo12Results(output, imageElement.width, imageElement.height);
     console.log("Detections:", detections);
     
-    // Get highest confidence detection
-    let highestConfidence = 0;
-    if (detections.length > 0) {
-      highestConfidence = Math.max(...detections.map(d => d.confidence));
-    }
+    // Find highest confidence
+    const highestConfidence = detections.length > 0 
+      ? Math.max(...detections.map(d => d.confidence))
+      : 0;
     
-    // Determine if a bin was detected - use a lower threshold
-    const confidenceThreshold = 0.2; // Lower threshold for testing
-    const isBin = detections.length > 0 && highestConfidence > confidenceThreshold;
+    const isBin = detections.length > 0 && highestConfidence > 0.6; // Lower to 60%
+    
     console.log(`Bin detected: ${isBin}, Confidence: ${highestConfidence}`);
     
     return {
       isBin,
       detections,
-      highestConfidence: highestConfidence * 100 // Convert to percentage
+      highestConfidence
     };
+    
   } catch (error) {
-    console.error("Error detecting bin:", error);
-    return {
-      isBin: false,
-      detections: [],
-      highestConfidence: 0
-    };
+    console.error("Detection error:", error);
+    throw error;
   }
 }
 
-// Preprocessing function for YOLOv11n
-async function preprocessImage(img: HTMLImageElement, width: number, height: number, ort: any): Promise<any> {
-  // Create a canvas for image preprocessing
+// Preprocessing function for YOLOv12
+function preprocessImage(imageElement: HTMLImageElement, ort: any): any {
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d')!;
   
-  if (!ctx) {
-    throw new Error("Could not get canvas context");
-  }
+  // YOLOv12 expects 640x640 input
+  const inputSize = 640;
+  canvas.width = inputSize;
+  canvas.height = inputSize;
   
-  // Draw and resize the image
-  ctx.drawImage(img, 0, 0, width, height);
+  // Draw image scaled to fit canvas
+  ctx.drawImage(imageElement, 0, 0, inputSize, inputSize);
   
   // Get image data
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const { data } = imageData;
+  const imageData = ctx.getImageData(0, 0, inputSize, inputSize);
+  const data = imageData.data;
   
-  // Prepare data for YOLOv11n (NCHW format, normalized to [0,1])
-  const rgbData = new Float32Array(3 * height * width);
+  // Convert to RGB and normalize to [0, 1]
+  const inputArray = new Float32Array(3 * inputSize * inputSize);
   
-  // Populate RGB channels (NCHW format)
-  let pixelIndex = 0;
-  for (let c = 0; c < 3; c++) {
-    for (let h = 0; h < height; h++) {
-      for (let w = 0; w < width; w++) {
-        const srcIdx = (h * width + w) * 4;
-        rgbData[pixelIndex++] = data[srcIdx + c] / 255.0;  // Normalize to [0,1]
-      }
-    }
+  for (let i = 0; i < inputSize * inputSize; i++) {
+    const pixelIndex = i * 4;
+    // Normalize from [0, 255] to [0, 1]
+    inputArray[i] = data[pixelIndex] / 255.0;                    // R
+    inputArray[i + inputSize * inputSize] = data[pixelIndex + 1] / 255.0;     // G
+    inputArray[i + 2 * inputSize * inputSize] = data[pixelIndex + 2] / 255.0; // B
   }
   
-  // Create tensor in correct format for YOLOv11n
-  return new ort.Tensor('float32', rgbData, [1, 3, height, width]);
-}
-
-// Process YOLOv11n results specifically for the [1,5,8400] output format
-function processYolo11Results(results: any, imgWidth: number, imgHeight: number): DetectionResult[] {
-  // Get the output - typically named "output0" in YOLO ONNX models
-  const outputName = Object.keys(results)[0];
-  const output = results[outputName];
-  
-  if (!output || !output.data || output.dims.length === 0) {
-    console.error("Invalid output format");
-    return [];
-  }
-  
-  console.log(`Output dimensions: ${output.dims}`);
-  
-  const detections: DetectionResult[] = [];
-  
-  try {
-    // Extract data from output tensor
-    const outputData = output.data as Float32Array;
-    const dimensions = output.dims;
-    
-    // Log first few values to understand format
-    console.log("First 10 values:", outputData.slice(0, 10));
-    
-    // Handle YOLOv11n single-class output format: [1, 5, 8400] 
-    // where 5 = [x, y, w, h, confidence]
-    if (dimensions.length === 3 && dimensions[1] === 5) {
-      const numBoxes = dimensions[2];
-      
-      console.log(`Parsing as YOLOv11n output: ${numBoxes} candidate boxes`);
-      
-      // Confidence threshold - can be adjusted
-      const confidenceThreshold = 0.2;
-      
-      // Process each detection
-      // Format is: [x, y, w, h, conf] for each of the 8400 boxes
-      for (let i = 0; i < numBoxes; i++) {
-        const cx = outputData[0 * numBoxes + i]; // Center x
-        const cy = outputData[1 * numBoxes + i]; // Center y
-        const w = outputData[2 * numBoxes + i];  // Width
-        const h = outputData[3 * numBoxes + i];  // Height
-        const conf = outputData[4 * numBoxes + i]; // Confidence
-        
-        // Skip low confidence detections
-        if (conf < confidenceThreshold) continue;
-        
-        // Convert normalized coordinates to absolute image coordinates
-        const bbox: [number, number, number, number] = [
-          (cx - w/2) * imgWidth,  // x1 (top-left corner)
-          (cy - h/2) * imgHeight, // y1 
-          w * imgWidth,           // width
-          h * imgHeight           // height
-        ];
-        
-        detections.push({
-          label: CLASS_NAME,
-          confidence: conf,
-          bbox
-        });
-        
-        // Debug first few detections
-        if (detections.length <= 3) {
-          console.log(`Detection #${detections.length}: conf=${conf.toFixed(2)}, box=[${bbox.map(v => v.toFixed(0)).join(',')}]`);
-        }
-      }
-      
-      // If we have too many detections, sort by confidence and keep top ones
-      if (detections.length > 20) {
-        detections.sort((a, b) => b.confidence - a.confidence);
-        detections.splice(20); // Keep only top 20
-      }
-    } else {
-      console.log("Unexpected output format. Dimensions:", dimensions);
-    }
-    
-    console.log(`Found ${detections.length} detections above threshold`);
-    return detections;
-  } catch (error) {
-    console.error("Error processing YOLO results:", error);
-    return [];
-  }
+  // Create tensor [1, 3, 640, 640]
+  return new ort.Tensor('float32', inputArray, [1, 3, inputSize, inputSize]);
 }
