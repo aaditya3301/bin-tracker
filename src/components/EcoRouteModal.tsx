@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { X, Search, Route, Loader2, Map, ArrowRight, Leaf } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { MapPin, Navigation, Clock, TreePine, Trash2, X, Search, Loader2 } from 'lucide-react'
 
 type Location = {
   name: string
@@ -15,21 +16,25 @@ type Location = {
 type RouteOption = {
   id: string
   name: string
-  duration: number // in minutes
-  distance: number // in km
+  duration: number
+  distance: number
   binCount: number
-  ecoScore: number // 0-100
+  ecoScore: number
   description: string
+  polyline: string
+  waypoints?: Array<[number, number]>
 }
 
 interface EcoRouteModalProps {
   isOpen: boolean
   onClose: () => void
-  onRouteSelect: (startLocation: Location, endLocation: Location, routeId: string) => void
-  nearbyBins: any[] // Use your bin type here
+  onRouteSelect: (startLocation: Location, endLocation: Location, routeId: string, routes: RouteOption[]) => void
+  nearbyBins: any[]
 }
 
 export default function EcoRouteModal({ isOpen, onClose, onRouteSelect, nearbyBins }: EcoRouteModalProps) {
+  console.log("EcoRouteModal rendered, isOpen:", isOpen)
+  
   const [step, setStep] = useState<'locations' | 'results'>('locations')
   const [isLoading, setIsLoading] = useState(false)
   const [startLocation, setStartLocation] = useState<Location | null>(null)
@@ -43,92 +48,62 @@ export default function EcoRouteModal({ isOpen, onClose, onRouteSelect, nearbyBi
   const [endSearching, setEndSearching] = useState(false)
   const [error, setError] = useState('')
 
-  // Reset state when modal opens
+  // Debounced search for locations
+  // Debounced search for start location
   useEffect(() => {
-    if (isOpen) {
-      setStep('locations')
-      setStartLocation(null)
-      setEndLocation(null)
-      setStartQuery('')
-      setEndQuery('')
-      setRouteOptions([])
-      setError('')
-    }
-  }, [isOpen])
-
-  // If not open, don't render anything
-  if (!isOpen) return null;
-
-  // Search for locations
-  const searchLocations = async (query: string, isStart: boolean) => {
-    if (query.length < 3) {
-      if (isStart) {
-        setStartResults([])
-        setStartSearching(false)
-      } else {
-        setEndResults([])
-        setEndSearching(false)
-      }
-      return
-    }
-
-    if (isStart) {
-      setStartSearching(true)
+    if (startQuery.length > 2 && !startLocation) { // Only search if no location is selected
+      const timer = setTimeout(() => searchLocations(startQuery, 'start'), 700) // Increased delay
+      return () => clearTimeout(timer)
     } else {
-      setEndSearching(true)
+      setStartResults([])
     }
+  }, [startQuery, startLocation])
+
+  // Debounced search for end location  
+  useEffect(() => {
+    if (endQuery.length > 2 && !endLocation) { // Only search if no location is selected
+      const timer = setTimeout(() => searchLocations(endQuery, 'end'), 700) // Increased delay
+      return () => clearTimeout(timer)
+    } else {
+      setEndResults([])
+    }
+  }, [endQuery, endLocation])
+
+  const searchLocations = async (query: string, type: 'start' | 'end') => {
+    if (type === 'start') setStartSearching(true)
+    else setEndSearching(true)
 
     try {
-      // Using Nominatim OpenStreetMap search API
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=in&addressdetails=1`
       )
-
-      if (!response.ok) {
-        throw new Error('Location search failed')
-      }
-
-      const data = await response.json()
       
+      if (!response.ok) throw new Error('Search failed')
+      
+      const data = await response.json()
       const locations: Location[] = data.map((item: any) => ({
         name: item.display_name,
         lat: parseFloat(item.lat),
         lng: parseFloat(item.lon)
       }))
 
-      if (isStart) {
+      if (type === 'start') {
         setStartResults(locations)
-        setStartSearching(false)
       } else {
         setEndResults(locations)
-        setEndSearching(false)
       }
-    } catch (err) {
-      console.error('Error searching locations:', err)
-      setError('Failed to search locations. Please try again.')
-      if (isStart) {
-        setStartSearching(false)
-      } else {
-        setEndSearching(false)
-      }
+    } catch (error) {
+      console.error('Location search error:', error)
+      setError('Failed to search locations')
+    } finally {
+      if (type === 'start') setStartSearching(false)
+      else setEndSearching(false)
     }
   }
 
-  // Handle location selection
-  const selectLocation = (location: Location, isStart: boolean) => {
-    if (isStart) {
-      setStartLocation(location)
-      setStartQuery(location.name.split(',')[0])
-      setStartResults([])
-    } else {
-      setEndLocation(location)
-      setEndQuery(location.name.split(',')[0])
-      setEndResults([])
-    }
-  }
-
-  // Generate route options with AI
-  const generateRouteOptions = async () => {
+  const generateRoutes = async () => {
+    console.log("Generate routes clicked!", { startLocation, endLocation, isLoading })
+    
     if (!startLocation || !endLocation) {
       setError('Please select both start and end locations')
       return
@@ -138,321 +113,503 @@ export default function EcoRouteModal({ isOpen, onClose, onRouteSelect, nearbyBi
     setError('')
 
     try {
-      // In a real implementation, you'd call your routing API here
-      // For this demo, we'll simulate generating routes
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Calculate the actual distance between start and end
+      const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+        const R = 6371 // Earth's radius in km
+        const dLat = (lat2 - lat1) * Math.PI / 180
+        const dLon = (lon2 - lon1) * Math.PI / 180
+        const a = 
+          Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+          Math.sin(dLon/2) * Math.sin(dLon/2)
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+        return R * c
+      }
 
-      // Calculate distance between points in km using Haversine formula
-      const distance = calculateDistance(startLocation, endLocation)
-      
-      // Simulate finding bins along route
-      const binsAlongRoute = nearbyBins.filter(bin => {
-        // Check if bin is roughly within the bounding box of the route with some buffer
-        const isWithinBounds = 
-          bin.location.lat >= Math.min(startLocation.lat, endLocation.lat) - 0.01 &&
-          bin.location.lat <= Math.max(startLocation.lat, endLocation.lat) + 0.01 &&
-          bin.location.lng >= Math.min(startLocation.lng, endLocation.lng) - 0.01 &&
-          bin.location.lng <= Math.max(startLocation.lng, endLocation.lng) + 0.01
+      const baseDistance = calculateDistance(startLocation.lat, startLocation.lng, endLocation.lat, endLocation.lng)
+      const baseDuration = Math.max(Math.round(baseDistance * 3.5), 8) // ~3.5 minutes per km, minimum 8 minutes
+
+      // Generate virtual bins along route paths - UPDATED DENSITIES
+      const generateVirtualBins = (routePoints: Array<[number, number]>, routeType: string): number => {
+        let virtualBins = 0
         
-        if (!isWithinBounds) return false
+        // Updated bin densities as requested
+        const binsPerKm = routeType === 'bin-maximizer' ? 0.9 : // 0.9 bins per km
+                         routeType === 'eco-optimal' ? 0.7 : // 0.7 bins per km  
+                         0.4 // 0.4 bins per km for fastest
         
-        // Check if roughly along route (within some distance of the straight line)
-        return isPointNearLine(
-          bin.location.lat, bin.location.lng,
-          startLocation.lat, startLocation.lng,
-          endLocation.lat, endLocation.lng,
-          0.005 // threshold in degrees (roughly 500m)
-        )
-      })
+        // Calculate bins based on actual distance
+        const distanceBasedBins = Math.round(baseDistance * binsPerKm)
+        virtualBins = distanceBasedBins
+        
+        // Add small route complexity bonus (based on waypoints)
+        const complexityBonus = routeType === 'bin-maximizer' ? Math.floor(routePoints.length * 0.2) :
+                               routeType === 'eco-optimal' ? Math.floor(routePoints.length * 0.15) :
+                               Math.floor(routePoints.length * 0.1)
+        
+        virtualBins += complexityBonus
+        
+        // Very small randomness for realism
+        const randomVariation = Math.floor(Math.random() * 3) - 1 // ±1 bin only
+        virtualBins += randomVariation
+        
+        // Ensure minimum based on distance
+        const minimumBins = Math.max(Math.floor(baseDistance * 0.3), 1) // At least 0.3 bins per km, minimum 1
+        
+        return Math.max(virtualBins, minimumBins)
+      }
+
+      // Count existing nearby bins along route
+      const countNearbyBins = (routePoints: Array<[number, number]>, threshold: number): number => {
+        let nearbyCount = 0
+        
+        nearbyBins.forEach(bin => {
+          // Check if bin is near any segment of this route
+          for (let i = 0; i < routePoints.length - 1; i++) {
+            const pointA = routePoints[i]
+            const pointB = routePoints[i + 1]
+            
+            // Simple distance check to route line
+            const distanceToRoute = Math.min(
+              Math.sqrt(Math.pow(bin.location.lat - pointA[0], 2) + Math.pow(bin.location.lng - pointA[1], 2)),
+              Math.sqrt(Math.pow(bin.location.lat - pointB[0], 2) + Math.pow(bin.location.lng - pointB[1], 2))
+            )
+            
+            if (distanceToRoute < threshold) {
+              nearbyCount++
+              break // Don't count the same bin multiple times
+            }
+          }
+        })
+        
+        return nearbyCount
+      }
+
+      // Generate route points and calculate comprehensive bin counts
+      const generateRouteData = (routeType: string) => {
+        let distanceMultiplier = 1
+        let durationMultiplier = 1
+        let routePoints: Array<[number, number]> = []
+        
+        // Generate route points
+        const latDiff = endLocation.lat - startLocation.lat
+        const lngDiff = endLocation.lng - startLocation.lng
+        
+        // Add start point
+        routePoints.push([startLocation.lat, startLocation.lng])
+        
+        if (routeType === 'eco-optimal') {
+          distanceMultiplier = 1.15
+          durationMultiplier = 1.10
+          // Generate curved path with 4-5 waypoints for better bin access
+          for (let i = 1; i <= 4; i++) {
+            const progress = i / 5
+            const curveFactor = Math.sin(progress * Math.PI) * 0.003
+            routePoints.push([
+              startLocation.lat + latDiff * progress + curveFactor,
+              startLocation.lng + lngDiff * progress + (Math.random() - 0.5) * 0.001
+            ])
+          }
+        } else if (routeType === 'bin-maximizer') {
+          distanceMultiplier = 1.35
+          durationMultiplier = 1.25
+          // Generate path with many waypoints to maximize bin access
+          for (let i = 1; i <= 7; i++) {
+            const progress = i / 8
+            const curveFactor = Math.sin(progress * Math.PI * 2) * 0.004
+            routePoints.push([
+              startLocation.lat + latDiff * progress + curveFactor,
+              startLocation.lng + lngDiff * progress + (i % 2 === 0 ? 0.002 : -0.002)
+            ])
+          }
+        } else {
+          distanceMultiplier = 1.05
+          durationMultiplier = 1.02
+          // Direct path with minimal waypoints
+          routePoints.push([
+            startLocation.lat + latDiff * 0.33,
+            startLocation.lng + lngDiff * 0.33
+          ])
+          routePoints.push([
+            startLocation.lat + latDiff * 0.67,
+            startLocation.lng + lngDiff * 0.67
+          ])
+        }
+        
+        // Add end point
+        routePoints.push([endLocation.lat, endLocation.lng])
+        
+        // Count real nearby bins
+        const threshold = routeType === 'bin-maximizer' ? 0.008 :
+                         routeType === 'eco-optimal' ? 0.006 : 0.004
+        const realBins = countNearbyBins(routePoints, threshold)
+        
+        // Generate virtual bins for this route
+        const virtualBins = generateVirtualBins(routePoints, routeType)
+        
+        // Combine real and virtual bins with realistic cap based on lower density
+        const distanceBasedCap = Math.max(Math.floor(baseDistance * 1.5), 5) // Reduced cap, minimum 5
+        const totalBins = Math.min(realBins + virtualBins, distanceBasedCap)
+        
+        return {
+          distance: Math.round((baseDistance * distanceMultiplier) * 10) / 10,
+          duration: Math.round(baseDuration * durationMultiplier),
+          binCount: totalBins,
+          routePoints,
+          realBins,
+          virtualBins
+        }
+      }
+
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500))
       
-      // Generate mock route options
-      const routes: RouteOption[] = [
+      const ecoData = generateRouteData('eco-optimal')
+      const binMaxData = generateRouteData('bin-maximizer')
+      const fastestData = generateRouteData('fastest')
+
+      // Ensure proper bin hierarchy with realistic differences
+      if (binMaxData.binCount <= ecoData.binCount) {
+        binMaxData.binCount = ecoData.binCount + Math.floor(Math.random() * 2) + 2 // Add 2-3 more bins
+      }
+      if (fastestData.binCount >= ecoData.binCount) {
+        fastestData.binCount = Math.max(ecoData.binCount - Math.floor(Math.random() * 2) - 1, 1) // 1-2 fewer bins, minimum 1
+      }
+
+      // Final validation - ensure realistic maximums based on lower density
+      const maxPossible = Math.floor(baseDistance * 1.5) // Reduced from 3 to 1.5 bins per km
+      binMaxData.binCount = Math.min(binMaxData.binCount, maxPossible)
+      ecoData.binCount = Math.min(ecoData.binCount, Math.floor(maxPossible * 0.8))
+      fastestData.binCount = Math.min(fastestData.binCount, Math.floor(maxPossible * 0.5))
+
+      // Generate dynamic route options with more concise descriptions
+      const dynamicRoutes: RouteOption[] = [
         {
           id: 'eco-optimal',
           name: 'Eco-Optimal Route',
-          
-          duration: Math.round(distance * 3), // ~20km/h walking/cycling
-          distance: Math.round(distance * 10) / 10,
-          binCount: binsAlongRoute.length,
-          ecoScore: 95,
-          description: 'Best balance of travel time and bin access'
+          duration: ecoData.duration,
+          distance: ecoData.distance,
+          binCount: ecoData.binCount,
+          ecoScore: 85,
+          description: `Balanced eco-friendly route with ${ecoData.binCount} waste bins along the way. Optimized for environmental responsibility and efficiency.`,
+          polyline: '',
+          waypoints: ecoData.routePoints
         },
         {
-          id: 'bin-maximizer',
+          id: 'bin-maximizer', 
           name: 'Bin Maximizer',
-          duration: Math.round(distance * 3.5), // slightly slower
-          distance: Math.round((distance * 1.15) * 10) / 10, // slightly longer
-          binCount: Math.min(binsAlongRoute.length + 3, nearbyBins.length),
-          ecoScore: 85,
-          description: 'More bins, slightly longer travel time'
+          duration: binMaxData.duration,
+          distance: binMaxData.distance,
+          binCount: binMaxData.binCount,
+          ecoScore: 78,
+          description: `Maximum waste disposal access with ${binMaxData.binCount} bins along the extended route. Perfect for comprehensive waste management.`,
+          polyline: '',
+          waypoints: binMaxData.routePoints
         },
         {
           id: 'fastest',
           name: 'Fastest Route',
-          duration: Math.round(distance * 2.5), // faster
-          distance: Math.round((distance * 0.95) * 10) / 10, // shorter
-          binCount: Math.max(binsAlongRoute.length - 2, 0),
-          ecoScore: 75,
-          description: 'Quickest path with fewer waste bins'
+          duration: fastestData.duration,
+          distance: fastestData.distance,
+          binCount: fastestData.binCount,
+          ecoScore: 65,
+          description: `Direct route with ${fastestData.binCount} essential waste bins. Minimal detours while maintaining eco-responsibility.`,
+          polyline: '',
+          waypoints: fastestData.routePoints
         }
       ]
-
-      setRouteOptions(routes)
+      
+      setRouteOptions(dynamicRoutes)
       setStep('results')
-    } catch (err) {
-      console.error('Error generating routes:', err)
-      setError('Failed to generate routes. Please try again.')
+      
+    } catch (error) {
+      console.error('Route generation error:', error)
+      setError('Failed to generate routes')
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Handle route selection
-  const handleRouteSelect = (routeId: string) => {
+  const handleRouteSelect = (route: RouteOption) => {
     if (startLocation && endLocation) {
-      onRouteSelect(startLocation, endLocation, routeId)
+      onRouteSelect(startLocation, endLocation, route.id, routeOptions)
       onClose()
     }
   }
 
-  // Helper function to calculate distance between two points using Haversine formula
-  const calculateDistance = (point1: Location, point2: Location) => {
-    const R = 6371 // Earth's radius in km
-    const dLat = (point2.lat - point1.lat) * Math.PI / 180
-    const dLon = (point2.lng - point1.lng) * Math.PI / 180
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
-    return R * c // Distance in km
+  const resetModal = () => {
+    setStep('locations')
+    setStartLocation(null)
+    setEndLocation(null)
+    setStartQuery('')
+    setEndQuery('')
+    setStartResults([]) // Clear search results
+    setEndResults([])   // Clear search results
+    setRouteOptions([])
+    setError('')
+    setStartSearching(false) // Reset searching states
+    setEndSearching(false)
   }
 
-  // Helper function to check if a point is near a line segment
-  const isPointNearLine = (
-    pointLat: number, pointLng: number,
-    line1Lat: number, line1Lng: number,
-    line2Lat: number, line2Lng: number,
-    threshold: number
-  ) => {
-    // Calculate the minimum distance from point to line segment
-    // Simplified method for demo purposes
-    const A = pointLat - line1Lat
-    const B = pointLng - line1Lng
-    const C = line2Lat - line1Lat
-    const D = line2Lng - line1Lng
-    
-    const dot = A * C + B * D
-    const lenSq = C * C + D * D
-    let param = dot / lenSq
-    
-    let closestLat, closestLng
-    
-    if (param < 0) {
-      closestLat = line1Lat
-      closestLng = line1Lng
+  useEffect(() => {
+    if (!isOpen) {
+      resetModal()
     }
-    else if (param > 1) {
-      closestLat = line2Lat
-      closestLng = line2Lng
-    }
-    else {
-      closestLat = line1Lat + param * C
-      closestLng = line1Lng + param * D
-    }
-    
-    const distance = Math.sqrt(
-      Math.pow(pointLat - closestLat, 2) + 
-      Math.pow(pointLng - closestLng, 2)
-    )
-    
-    return distance < threshold
-  }
+  }, [isOpen])
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Route className="h-5 w-5 text-green-600 mr-2" />
-              <h2 className="text-lg font-semibold">Eco-Friendly Route Planner</h2>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-white text-gray-900">
+        <DialogHeader className="border-b pb-4">
+          <DialogTitle className="flex items-center gap-3 text-xl font-bold text-gray-900">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Navigation className="h-6 w-6 text-green-600" />
             </div>
-            <button 
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <p className="text-sm text-gray-500 mt-1">
-            Find the optimal route with low carbon footprint and easy access to waste bins.
-          </p>
-        </div>
+            Plan Eco-Friendly Route
+          </DialogTitle>
+          <DialogDescription className="text-gray-600 mt-2">
+            Find the most environmentally friendly route between two locations, optimized for waste disposal opportunities.
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Content */}
-        <div className="p-4">
+        <div className="py-6">
           {step === 'locations' && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="start" className='text-black'>Starting Point</Label>
+            <div className="space-y-6">
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm font-medium">
+                  ⚠️ {error}
+                </div>
+              )}
+
+              {/* Start Location */}
+              <div className="space-y-3">
+                <Label htmlFor="start" className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                  <MapPin className="h-4 w-4 text-green-600" />
+                  Starting Point
+                </Label>
                 <div className="relative">
                   <Input
                     id="start"
-                    placeholder="Enter starting location"
-                    className='text-black'
                     value={startQuery}
-                    
                     onChange={(e) => {
                       setStartQuery(e.target.value)
-                      searchLocations(e.target.value, true)
+                      // If user starts typing again, clear the selected location
+                      if (startLocation && e.target.value !== startLocation.name) {
+                        setStartLocation(null)
+                      }
                     }}
-                    
+                    placeholder="Enter starting location (e.g., Mumbai, Delhi)..."
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 text-gray-900 placeholder-gray-500"
+                    autoComplete="off"
                   />
-                  {startSearching ? (
-                    <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-gray-400" />
-                  ) : (
-                    <Search className="absolute right-2 top-2.5 h-4 w-4 text-gray-400" />
-                  )}
-                  
-                  {startResults.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full bg-white rounded-md border shadow-lg max-h-60 overflow-auto">
-                      <ul className="py-1">
-                        {startResults.map((location, i) => (
-                          <li 
-                            key={i} 
-                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm text-black"
-                            onClick={() => selectLocation(location, true)}
-                          >
-                            {location.name}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  {startSearching && (
+                    <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-600 animate-spin" />
                   )}
                 </div>
+                
+                {startSearching && (
+                  <p className="text-sm text-gray-600 flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Searching locations...
+                  </p>
+                )}
+                
+                {/* Start Location dropdown - Show full location name */}
+                {startResults.length > 0 && (
+                  <div className="border-2 border-gray-200 rounded-lg max-h-40 overflow-y-auto bg-white shadow-lg">
+                    {startResults.map((location, index) => (
+                      <button
+                        key={index}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setStartLocation(location)
+                          setStartQuery(location.name) // Show FULL location name instead of split
+                          setStartResults([]) // Clear results immediately
+                        }}
+                        className="w-full text-left p-3 hover:bg-green-50 border-b border-gray-100 last:border-b-0 text-sm text-gray-800 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                          <span className="truncate">{location.name}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {startLocation && (
+                  <div className="p-3 bg-green-50 border-2 border-green-200 rounded-lg text-sm text-green-800">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="font-medium">Selected:</span>
+                      <span>{startLocation.name.split(',')[0]}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="end" className='text-black'>Destination</Label>
+              {/* End Location */}
+              <div className="space-y-3">
+                <Label htmlFor="end" className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                  <MapPin className="h-4 w-4 text-red-600" />
+                  Destination
+                </Label>
                 <div className="relative">
                   <Input
                     id="end"
-                    placeholder="Enter destination"
                     value={endQuery}
-                    className='text-black'
                     onChange={(e) => {
                       setEndQuery(e.target.value)
-                      searchLocations(e.target.value, false)
+                      // If user starts typing again, clear the selected location
+                      if (endLocation && e.target.value !== endLocation.name) {
+                        setEndLocation(null)
+                      }
                     }}
-                   
+                    placeholder="Enter destination (e.g., Bangalore, Pune)..."
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:ring-2 focus:ring-red-200 text-gray-900 placeholder-gray-500"
+                    autoComplete="off"
                   />
-                  {endSearching ? (
-                    <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-black" />
-                  ) : (
-                    <Search className="absolute right-2 top-2.5 h-4 w-4 text-black" />
-                  )}
-                  
-                  {endResults.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full bg-white rounded-md border shadow-lg max-h-60 overflow-auto">
-                      <ul className="py-1">
-                        {endResults.map((location, i) => (
-                          <li 
-                            key={i} 
-                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm text-black"
-                            onClick={() => selectLocation(location, false)}
-                          >
-                            {location.name}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  {endSearching && (
+                    <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-red-600 animate-spin" />
                   )}
                 </div>
-              </div>
-
-              {startLocation && endLocation && (
-                <div className="bg-gray-50 p-3 rounded-md border border-gray-200 mt-4">
-                  <div className="flex items-start">
-                    <div className="min-w-[24px]">
-                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                        <span className="h-2 w-2 rounded-full bg-green-600"></span>
-                      </div>
-                      <div className="h-8 w-0.5 bg-gray-300 mx-auto"></div>
-                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="h-2 w-2 rounded-full bg-blue-600"></span>
-                      </div>
-                    </div>
-                    <div className="ml-4 flex-1">
-                      <p className="text-sm font-medium">{startLocation.name.split(',')[0]}</p>
-                      <p className="text-xs text-gray-500 mt-1 mb-2">{startLocation.name.split(',').slice(1, 3).join(',')}</p>
-                      <p className="text-sm font-medium">{endLocation.name.split(',')[0]}</p>
-                      <p className="text-xs text-gray-500 mt-1">{endLocation.name.split(',').slice(1, 3).join(',')}</p>
+                
+                {endSearching && (
+                  <p className="text-sm text-gray-600 flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Searching locations...
+                  </p>
+                )}
+                
+                {/* End Location dropdown - Show full location name */}
+                {endResults.length > 0 && (
+                  <div className="border-2 border-gray-200 rounded-lg max-h-40 overflow-y-auto bg-white shadow-lg">
+                    {endResults.map((location, index) => (
+                      <button
+                        key={index}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setEndLocation(location)
+                          setEndQuery(location.name) // Show FULL location name instead of split
+                          setEndResults([]) // Clear results immediately
+                        }}
+                        className="w-full text-left p-3 hover:bg-red-50 border-b border-gray-100 last:border-b-0 text-sm text-gray-800 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                          <span className="truncate">{location.name}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {endLocation && (
+                  <div className="p-3 bg-red-50 border-2 border-red-200 rounded-lg text-sm text-red-800">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span className="font-medium">Selected:</span>
+                      <span>{endLocation.name.split(',')[0]}</span>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {error && (
-                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md border border-red-100">
-                  {error}
-                </div>
-              )}
+              {/* Generate Routes Button */}
+              <div className="pt-4 border-t">
+                <Button
+                  onClick={generateRoutes}
+                  disabled={!startLocation || !endLocation || isLoading}
+                  className="w-full py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-500 transition-all duration-200"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Generating Eco Routes...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <TreePine className="h-5 w-5" />
+                      Find Eco Routes
+                    </div>
+                  )}
+                </Button>
+                
+                {(!startLocation || !endLocation) && (
+                  <p className="text-center text-sm text-gray-500 mt-2">
+                    Please select both locations to continue
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
           {step === 'results' && (
-            <div>
-              <div className="mb-4">
-                <div className="text-sm text-gray-500 mb-2">Route options from</div>
-                <div className="flex items-center">
-                  <span className="font-medium">{startLocation?.name.split(',')[0]}</span>
-                  <ArrowRight className="h-4 w-4 mx-2 text-gray-400" />
-                  <span className="font-medium">{endLocation?.name.split(',')[0]}</span>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Route Options</h3>
+                  <p className="text-sm text-gray-600">Choose the best route for your journey</p>
                 </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setStep('locations')}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Change Locations
+                </Button>
               </div>
 
-              <div className="space-y-3">
-                {routeOptions.map((route) => (
-                  <div 
+              <div className="space-y-4">
+                {routeOptions.map((route, index) => (
+                  <div
                     key={route.id}
-                    className="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => handleRouteSelect(route.id)}
+                    className="border-2 border-gray-200 rounded-xl p-5 hover:border-green-300 hover:bg-green-50/50 cursor-pointer transition-all duration-200 group"
+                    onClick={() => handleRouteSelect(route)}
                   >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium flex items-center">
-                          {route.name}
-                          {route.id === 'eco-optimal' && (
-                            <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full ml-2 flex items-center">
-                              <Leaf className="h-3 w-3 mr-1" />
-                              Recommended
-                            </span>
-                          )}
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">{route.description}</p>
-                      </div>
-                      <div className="bg-green-50 px-2 py-1 rounded-md">
-                        <div className="text-sm font-semibold text-green-700">
-                          {route.ecoScore}%
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-sm">
+                          {index + 1}
                         </div>
-                        <div className="text-xs text-green-600">Eco-score</div>
+                        <h4 className="font-bold text-lg text-gray-900 group-hover:text-green-700 transition-colors">
+                          {route.name}
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-2 bg-green-100 px-3 py-1 rounded-full">
+                        <TreePine className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-bold text-green-700">{route.ecoScore}% Eco</span>
                       </div>
                     </div>
                     
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-                      <div className="bg-gray-50 rounded p-2">
-                        <div className="text-xs text-gray-500">Duration</div>
-                        <div className="font-medium text-gray-600">{route.duration} min</div>
+                    <p className="text-gray-700 text-sm mb-4 leading-relaxed">{route.description}</p>
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <div className="text-xs text-blue-600 font-medium">Duration</div>
+                          <div className="text-sm font-bold text-blue-800">{route.duration} min</div>
+                        </div>
                       </div>
-                      <div className="bg-gray-50 rounded p-2">
-                        <div className="text-xs text-gray-500">Distance</div>
-                        <div className="font-medium text-black">{route.distance} km</div>
+                      <div className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg">
+                        <Navigation className="h-4 w-4 text-purple-600" />
+                        <div>
+                          <div className="text-xs text-purple-600 font-medium">Distance</div>
+                          <div className="text-sm font-bold text-purple-800">{route.distance} km</div>
+                        </div>
                       </div>
-                      <div className="bg-gray-50 rounded p-2">
-                        <div className="text-xs text-gray-500">Bins</div>
-                        <div className="font-medium text-gray-600">{route.binCount}</div>
+                      <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg">
+                        <Trash2 className="h-4 w-4 text-orange-600" />
+                        <div>
+                          <div className="text-xs text-orange-600 font-medium">Bins</div>
+                          <div className="text-sm font-bold text-orange-800">{route.binCount} found</div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -461,51 +618,7 @@ export default function EcoRouteModal({ isOpen, onClose, onRouteSelect, nearbyBi
             </div>
           )}
         </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t">
-          {step === 'locations' && (
-            <div className="flex justify-end">
-              <Button 
-                type="button" 
-                onClick={onClose} 
-                variant="outline" 
-                className="mr-2 text-black"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={!startLocation || !endLocation || isLoading}
-                onClick={generateRouteOptions}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating Routes...
-                  </>
-                ) : (
-                  <>
-                    Find Eco-Routes
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {step === 'results' && (
-            <Button 
-              type="button" 
-              onClick={() => setStep('locations')}
-              variant="outline"
-            >
-              Back to Locations
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
