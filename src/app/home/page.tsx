@@ -74,6 +74,9 @@ export default function HomePage() {
                 Rewards
               </Link>
               
+              <Link href="/community" className="text-gray-800 hover:text-[#4CAF50] transition-colors">
+                Community
+              </Link>
             </motion.nav>
           
             <motion.div

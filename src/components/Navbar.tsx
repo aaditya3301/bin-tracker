@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Leaf } from 'lucide-react'
+import UserMenu from './UserMenu';
 
 interface NavbarProps {
   onLoginClick?: () => void;
@@ -39,9 +41,7 @@ const Navbar = ({ onLoginClick, onSignupClick }: NavbarProps) => {
       <div className="container mx-auto px-4 flex justify-between items-center">
         {/* Logo */}
         <Link href="/" className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center mr-2">
-            <span className="text-white font-bold text-xs">BT</span>
-          </div>
+          <Leaf className="h-7 w-7 text-[#4CAF50] mr-2" />
           <span className={`text-xl font-bold ${isScrolled ? 'text-green-700' : 'text-green-50'}`}>
             BIN<span className="font-normal italic text-green-500">track</span>
           </span>
@@ -115,6 +115,11 @@ const Navbar = ({ onLoginClick, onSignupClick }: NavbarProps) => {
           </div>
         </div>
       )}
+
+      {/* Replace your Login/Sign Up button with the UserMenu */}
+      <div className="flex-shrink-0">
+        <UserMenu />
+      </div>
     </nav>
   );
 };

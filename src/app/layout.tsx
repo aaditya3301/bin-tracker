@@ -19,13 +19,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        {/* First wrap with SessionProvider for NextAuth */}
-        <SessionProvider>
-          {/* Then wrap with blockchain Providers (RainbowKit/Wagmi) */}
-          <Providers>
-            {children}
-          </Providers>
-        </SessionProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )
