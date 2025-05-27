@@ -7,6 +7,7 @@ import { sepolia } from 'wagmi/chains';
 import { http } from 'wagmi';
 import '@rainbow-me/rainbowkit/styles.css';
 import { useState } from 'react';
+import { SessionProvider } from "next-auth/react";
 
 const chains = [sepolia];
 const projectId = 'YOUR_ACTUAL_PROJECT_ID'; // Get a projectId from https://cloud.walletconnect.com
@@ -32,7 +33,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
-          {children}
+          <SessionProvider>{children}</SessionProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
