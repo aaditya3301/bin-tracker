@@ -117,10 +117,11 @@ export default function PostCard({ post, onLike, onAddComment }: PostCardProps) 
               <div className="flex items-start">
                 <div className="relative h-8 w-8 rounded-full overflow-hidden mr-2">
                   <Image 
-                    src={comment.author.image || '/avatars/default.jpg'} 
-                    alt={comment.author.name}
-                    fill
-                    className="object-cover"
+                  src={comment.author.image || '/avatars/default.jpg'} 
+                  alt={comment.author.name}
+                  fill
+                  className="object-cover"
+                  priority
                   />
                 </div>
                 <div>
@@ -152,7 +153,7 @@ export default function PostCard({ post, onLike, onAddComment }: PostCardProps) 
         <input
           type="text"
           placeholder="Add a comment..."
-          className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-green-500"
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
         />

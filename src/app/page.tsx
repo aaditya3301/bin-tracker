@@ -129,7 +129,7 @@ export default function Home() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         {/* Left Content with white background */}
-        <div className="text-left bg-white bg-opacity-95 p-32  shadow-lg">
+        <div className="text-left bg-white bg-opacity-100 p-32  shadow-lg">
           <h1 className="text-5xl lg:text-6xl font-bold text-gray-800 leading-tight mb-6">
             Smart Steps<br />
             Towards a<br />

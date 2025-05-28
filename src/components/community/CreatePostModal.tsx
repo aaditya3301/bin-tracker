@@ -62,7 +62,7 @@ export default function CreatePostModal({ onClose, onCreatePost }: CreatePostMod
         <form onSubmit={handleSubmit} className="p-6">
           <textarea
             placeholder="What's on your mind about waste management?"
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full border border-white text-black rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             rows={4}
             value={content}
             onChange={(e) => setContent(e.target.value)}
