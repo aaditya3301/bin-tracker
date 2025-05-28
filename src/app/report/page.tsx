@@ -259,7 +259,7 @@ export default function BinReportPage() {
           transition={{ duration: 0.6 }}
         >
           {/* Add this new section */}
-          <div className="relative h-[500px] w-full p-5">
+          <div className="relative h-[500px] w-full p-2">
             <div className="relative h-[200px] rounded-xl overflow-hidden mb-6">
               <img
                 src="/Rectangle 57.png" // Make sure to add this image to your public folder
@@ -269,7 +269,7 @@ export default function BinReportPage() {
               <div className="absolute inset-0 bg-black/00"></div>
             </div>
             
-            <div className="text-center mb-8 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white z-10 mt-20">
+            <div className="text-center mb-6 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white z-10 mt-20">
               <h2 className="text-2xl font-bold text-green-800 mb-4">
                 See a Mess? Help Us Fix It.
               </h2>
@@ -301,7 +301,7 @@ export default function BinReportPage() {
               }}
             />
 
-            <div className="flex items-center justify-between ml-60 mr-60">
+            <div className="flex items-center justify-between ml-72 mr-72 mb-24">
               {[1, 2, 3].map((step) => (
                 <div key={step} className="flex flex-col items-center relative">
                   <div 
@@ -337,7 +337,7 @@ export default function BinReportPage() {
           </div>
      
           
-          <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-6 border border-gray-100 ml-60 mr-60">
+          <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-6 border border-gray-100 ml-72 mr-72">
             {/* Step 1: Image Upload */}
             {formStep === 1 && (
               <div>

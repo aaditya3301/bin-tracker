@@ -150,10 +150,10 @@ export default function MapPage() {
           </div>
 
           {/* Map Container - Now with fixed height */}
-          <div className="h-[400px] rounded-lg overflow-hidden shadow-lg">
+            <div className="h-[400px] rounded-lg overflow-hidden shadow-lg">
             <FullScreenMap searchLocation={searchLocation} />
-          </div>
-          <div className="text-center mb-8 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white z-10 mt-80">
+            </div>
+          <div className="text-center mb-6 size-0.30 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white z-10 mt-96 ">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Looking for a Bin Near You?</h2>
             <p className="text-lg text-gray-600 mb-6">
               Find the closest smart waste bin and make the right disposal, right now.

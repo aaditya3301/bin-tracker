@@ -20,7 +20,7 @@ const MOCK_POSTS = [
       image: '/profile photo 1.webp',
     },
     content: 'Just cleaned up this area and found a hidden bin! #CleanupCrew',
-    imageUrl: '/cleaning 1.webp',
+    imageUrl: '/cleaning 1.jpg',
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     likes: 24,
     comments: [
@@ -40,7 +40,7 @@ const MOCK_POSTS = [
       image: '/profile photo 3.jpg',
     },
     content: 'Our community came together for a weekend bin installation project! #TeamWork',
-    imageUrl: '/cleaning 2.webp',
+    imageUrl: '/cleaning 2.png',
     createdAt: new Date(Date.now() - 86400000).toISOString(),
     likes: 42,
     comments: [
@@ -142,5 +142,6 @@ export default function CommunityPage() {
         )}
       </main>
     </ProtectedRoute>
+    
   );
 }
