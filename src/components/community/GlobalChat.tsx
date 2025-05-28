@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Send, Smile, X, Users } from 'lucide-react';
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import { useAuth } from '@/lib/auth';
 import { pusherService } from '@/lib/pusher';
 import Image from 'next/image';
-import { Send, Users, X, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -33,8 +35,11 @@ export default function GlobalChat({ isOpen, onClose }: GlobalChatProps) {
   const [newMessage, setNewMessage] = useState('');
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isOpen && session?.user) {
@@ -110,6 +115,23 @@ export default function GlobalChat({ isOpen, onClose }: GlobalChatProps) {
     }
   }, [messages]);
 
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !session?.user || !isConnected) return;
 
@@ -136,6 +158,31 @@ export default function GlobalChat({ isOpen, onClose }: GlobalChatProps) {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newText = newMessage.substring(0, start) + emojiData.emoji + newMessage.substring(end);
+      setNewMessage(newText);
+      
+      // Set cursor position after emoji
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + emojiData.emoji.length;
+        textarea.focus();
+      }, 0);
+    } else {
+      setNewMessage(prev => prev + emojiData.emoji);
+    }
+    
+    // Optionally close picker after selection
+    // setShowEmojiPicker(false);
+  };
+
+  const toggleEmojiPicker = () => {
+    setShowEmojiPicker(!showEmojiPicker);
   };
 
   const formatTime = (dateString: string) => {
@@ -283,19 +330,56 @@ export default function GlobalChat({ isOpen, onClose }: GlobalChatProps) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input */}
-            <div className="p-4 border-t border-gray-200">
-              <div className="flex gap-3">
-                <textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder={isConnected ? "Type your message..." : "Connecting..."}
-                  disabled={!isConnected}
-                  className="flex-1 resize-none border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100"
-                  rows={1}
-                  style={{ minHeight: '44px' }}
-                />
+            {/* Message Input with Emoji Picker */}
+            <div className="p-4 border-t border-gray-200 relative">
+              {/* Advanced Emoji Picker */}
+              {showEmojiPicker && (
+                <div 
+                  ref={emojiPickerRef}
+                  className="absolute bottom-20 right-4 z-10"
+                >
+                  <EmojiPicker
+                    onEmojiClick={handleEmojiClick}
+                    theme={Theme.LIGHT}
+                    width={350}
+                    height={400}
+                    previewConfig={{
+                      showPreview: false
+                    }}
+                    searchPlaceHolder="Search emojis..."
+                    emojiStyle="native"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-3 items-end">
+                <div className="flex-1 relative">
+                  <textarea
+                    ref={textareaRef}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder={isConnected ? "Type your message... 😊" : "Connecting..."}
+                    disabled={!isConnected}
+                    className="w-full resize-none border border-gray-300 text-black rounded-xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100"
+                    rows={1}
+                    style={{ minHeight: '44px', maxHeight: '120px' }}
+                  />
+                  
+                  {/* Emoji Button */}
+                  <button
+                    onClick={toggleEmojiPicker}
+                    className={`absolute right-3 top-1/2 transform -translate-y-1/2 transition-colors ${
+                      showEmojiPicker 
+                        ? 'text-green-500' 
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                    type="button"
+                  >
+                    <Smile className="h-5 w-5" />
+                  </button>
+                </div>
+                
                 <button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim() || !isConnected}

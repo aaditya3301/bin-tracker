@@ -135,25 +135,7 @@ export default function CommunityPage() {
           </div>
           
           {/* Chat Notification Banner */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Users className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-blue-900">Connect with the Community</h3>
-                  <p className="text-sm text-blue-700">Chat with fellow eco-warriors in real-time!</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsChatOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-              >
-                Join Chat
-              </button>
-            </div>
-          </div>
+         
           
           <div className="space-y-6">
             {posts.map(post => (
